@@ -33,14 +33,15 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject}
 
 object DirectExamples extends Specification {
 
+	doFirst { // create the Mongo instance
+		MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
+	}
+
 	import com.mongodb.util.JSON // Mongo parser/serializer
 
 	val debug = false
 
 	def date(s: String) = MongoFormats.dateFormat.parse(s).get
-
-	// define the Mongo instance
-	MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
 
   "Mongo tutorial example" in {
 
@@ -296,6 +297,9 @@ object DirectExamples extends Specification {
 				coll.drop
 			})
 		}
+		
+		// clear the mongo instances
+		MongoDB.close
   }
 }
 

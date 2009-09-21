@@ -20,12 +20,17 @@ import net.liftweb.util.{Box, Full}
 import net.liftweb.record.{MetaRecord, Record}
 import net.liftweb.record.field.StringField
 
-import com.mongodb.{BasicDBObject, ObjectId}
+import com.mongodb.{BasicDBObject, DBObject}
 
 trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	self: MyType =>
+	
+	/*
+	* every mongo record must have an _id field. Override this with the value of your _id object.
+	*/
+  def id: Any
 
-	// every mongo record must have an _id field
+	/* 
 	object _id extends StringField[MyType](this.asInstanceOf[MyType], 24) {
   	override def defaultValue = defaultId 
   }
@@ -35,6 +40,7 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
   
   // for overriding the default _id value
   def defaultId = (new ObjectId).toString
+  */
 
 	/**
 	* Was this instance deleted from backing store?
@@ -91,6 +97,15 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 		//DB.appendPostFunc(connectionIdentifier, func)
 	}
 */
+
+	/**
+	* Populate this record's fields with the values from a DBObject
+	*
+	* @param obj - The DBobject
+	*/
+	def fromDBObject(obj: DBObject): Box[MyType] = {
+		meta.fromDBObject(this, obj)
+	}
 
 	/**
 	* Populate this record's fields with the values from a json string

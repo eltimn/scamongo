@@ -27,34 +27,23 @@ import net.liftweb.json.JsonAST._
 import net.liftweb.json.JsonParser._
 import net.liftweb.json.JsonDSL._
 
-import com.mongodb.ObjectId
+//import com.mongodb.ObjectId
 
 //class JsonExampleTest extends Runner(Examples) with JUnit
 
 object JsonExamples extends Specification {
 
-	doFirst { /** user-defined setup function */ }
+	doFirst { // create the Mongo instances
+		MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
+		MongoDB.defineMongo(TestDBa, new MongoAddress("localhost", 27017, "test_a"))
+		MongoDB.defineMongo(TestDBb, new MongoAddress("localhost", 27017, "test_b"))
+ 	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer
 
 	val debug = false
 
 	def date(s: String) = MongoFormats.dateFormat.parse(s).get
-
-	/*
-	* MongoIdentifiers
-	*/
-	object TestDBa extends MongoIdentifier {
-		val jndiName = "test_a"
-	}
-	object TestDBb extends MongoIdentifier {
-		val jndiName = "test_b"
-	}
-
-	// create the Mongo instances
-	MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
-	MongoDB.defineMongo(TestDBa, new MongoAddress("localhost", 27017, "test_a"))
-	MongoDB.defineMongo(TestDBb, new MongoAddress("localhost", 27017, "test_b"))
 
 	val primitives = compact(render({
 		("str" -> "109") ~
@@ -68,14 +57,14 @@ object JsonExamples extends Specification {
 	"Simple Person example" in {
 
 		// create a new SimplePerson
-		val pid = MongoHelpers.newId
-		val p = SimplePerson(pid.toString, "Tim", 38)
+		val pid = MongoHelpers.newMongoId
+		val p = SimplePerson(pid, "Tim", 38)
 
 		// save it
 		p.save
 
 		// retrieve it
-		def pFromDb = SimplePerson.find(pid.toString)
+		def pFromDb = SimplePerson.find("_id", pid)
 
 		pFromDb.isDefined must_== true
 
@@ -88,16 +77,9 @@ object JsonExamples extends Specification {
 
 		p mustEqual pFromDbViaJson.get
 
-		// retrieve it using a String, Any
-		def pFromDbViaString = SimplePerson.find("_id", p._id)
-
-		pFromDbViaString.isDefined must_== true
-
-		p must_== pFromDbViaString.get
-
-		// modify the person
+		// modify and save the person
 		val p2 = SimplePerson(p._id, "Timm", 27)
-		p2.save
+		p2.save must_== p2
 
 		pFromDb.isDefined must_== true
 
@@ -118,7 +100,6 @@ object JsonExamples extends Specification {
 
 			pFromDb.isEmpty must_== true
 			pFromDbViaJson.isEmpty must_== true
-			pFromDbViaString.isEmpty must_== true
 		}
 
   }
@@ -126,9 +107,9 @@ object JsonExamples extends Specification {
   "Multiple Simple Person example" in {
 
 		// create new SimplePersons
-		val p = SimplePerson(MongoHelpers.newId.toString, "Jill", 27)
-		val p2 = SimplePerson(MongoHelpers.newId.toString, "Bob", 25)
-		val p3 = SimplePerson(MongoHelpers.newId.toString, "Bob", 29)
+		val p = SimplePerson(MongoHelpers.newMongoId, "Jill", 27)
+		val p2 = SimplePerson(MongoHelpers.newMongoId, "Bob", 25)
+		val p3 = SimplePerson(MongoHelpers.newMongoId, "Bob", 29)
 
 		//p mustNotEqual p2
 
@@ -176,9 +157,9 @@ object JsonExamples extends Specification {
   "Person example" in {
 
 		// create a new Person
-		val p = Person(MongoHelpers.newUUID.toString, "joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
+		val p = Person(MongoHelpers.newUUID, "joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
 
-		//println(p.children.first.birthdate.toString)
+		//println(p.toString)
 
 		// save it
 		p.save
@@ -202,57 +183,62 @@ object JsonExamples extends Specification {
 
   	// build a TestCollection
   	val info = TCInfo(203, 102)
-  	val tc = TestCollection(MongoHelpers.newId.toString, "MongoDB", "database", 1, info)
-  	val tc2 = TestCollection(MongoHelpers.newId.toString, "OtherDB", "database", 1, info)
+  	val tc = TestCollection(MongoHelpers.newMongoId, "MongoDB", "database", 1, info)
+  	val tc2 = TestCollection(MongoHelpers.newMongoId, "OtherDB", "database", 1, info)
 
   	// save to db
   	tc.save
   	tc2.save
 
   	// get the doc back from the db
-		def tcFromDb = TestCollection.find(tc._id)
-		def tc2FromDb = TestCollection.find(tc2._id)
+		def tcFromDb = TestCollection.find("_id", tc._id)
+		def tc2FromDb = TestCollection.find("_id", tc2._id)
 
 		tcFromDb.isDefined must_== true
 		tcFromDb.get must_== tc
 		tc2FromDb.isDefined must_== true
 		tc2FromDb.get must_== tc2
 
-		// upsert
-		val tc3 = TestCollection(tc._id, "MongoDB", "document", 2, info)
+		// update
+		val tc3 = TestCollection(tc._id, "MongoDB", "document", 2, info) // the new object to update with, replaces the entire document, except possibly _id
 		val q = ("name" -> "MongoDB") // the query to select the document(s) to update
-		val o = TestCollection.toJson(tc3)  // the new object to update with, replaces the entire document, except possibly _id
-		TestCollection.update(q, o)
+		TestCollection.update(q, tc3) must_== tc3 // update returns the new object that was passed in
 
 		// get the doc back from the db and compare
 		tcFromDb.isDefined must_== true
 		tcFromDb.get must_== tc3
+		
+		// Upset - this should add a new row
+		val tc4 = TestCollection(MongoHelpers.newMongoId, "nothing", "document", 1, info)
+		TestCollection.update(("name" -> "nothing"), tc4, Upsert)
+		TestCollection.findAll.length must_== 3
 
 		// modifier operations $inc, $set, $push...
 		val o2 = (("$inc" -> ("count" -> 1)) ~ ("$set" -> ("dbtype" -> "docdb")))
-		TestCollection.update(q, o2)
+		TestCollection.update(q, o2) must_== o2 // these updates return the o2 object that was passed in
 
 		// get the doc back from the db and compare
 		tcFromDb.isDefined must_== true
 		tcFromDb.get must_== TestCollection(tc._id, tc.name, "docdb", 3, info)
 
-		// this one should insert a new row
+		// this one shouldn't update anything
 		val o3 = (("$inc" -> ("count" -> 1)) ~ ("$set" -> ("dbtype" -> "docdb")))
-		TestCollection.update(("name" -> "nothing"), o3, ("upsert", true), ("apply" -> true))
-
-		TestCollection.findAll.length must_== 2
+		// when using $ modifiers, apply has to be false
+		TestCollection.update(("name" -> "nothing"), o3)
+		TestCollection.findAll.length must_== 3
 
 		if (!debug) {
 			// delete them
 			tc.delete
 			tc2.delete
+			tc4.delete
 		}
 
 		TestCollection.findAll.size must_== 0
 
 		// insert multiple documents
 		for (i <- List.range(1, 101)) {
-			IDoc(MongoHelpers.newId.toString, i).save
+			IDoc(MongoHelpers.newMongoId, i).save
     }
 
 		// count the docs
@@ -286,12 +272,12 @@ object JsonExamples extends Specification {
 		list2.length must_== 10
 
 		// limiting result set
-		val list3 = IDoc.findAll(("i" -> ("$gt" -> 50)), 3)
+		val list3 = IDoc.findAll(("i" -> ("$gt" -> 50)), Limit(3))
 
 		list3.length must_== 3
 
 		// skip
-		val list4 = IDoc.findAll(("i" -> ("$gt" -> 50)), 0, 10)
+		val list4 = IDoc.findAll(("i" -> ("$gt" -> 50)), Skip(10))
 		var cntr4 = 0
 		for (idoc <- list4) {
 			cntr4 += 1
@@ -300,7 +286,7 @@ object JsonExamples extends Specification {
 		list4.length must_== 40
 
 		// skip and limit (get first 10, skipping the first 5, where i > 50)
-		val list5 = IDoc.findAll(("i" -> ("$gt" -> 50)), 10, 5)
+		val list5 = IDoc.findAll(("i" -> ("$gt" -> 50)), Limit(10), Skip(5))
 		var cntr5 = 0
 		for (idoc <- list5) {
 			cntr5 += 1
@@ -326,9 +312,9 @@ object JsonExamples extends Specification {
   "Mongo useSession example" in {
 
   	val info = TCInfo(203, 102)
-		val tc = TestCollection(MongoHelpers.newId.toString, "MongoSession", "db", 1, info)
-		val tc2 = TestCollection(MongoHelpers.newId.toString, "MongoSession", "db", 1, info)
-		val tc3 = TestCollection(MongoHelpers.newId.toString, "MongoDB", "db", 1, info)
+		val tc = TestCollection(MongoHelpers.newMongoId, "MongoSession", "db", 1, info)
+		val tc2 = TestCollection(MongoHelpers.newMongoId, "MongoSession", "db", 1, info)
+		val tc3 = TestCollection(MongoHelpers.newMongoId, "MongoDB", "db", 1, info)
 
   	// use a Mongo instance directly with a session
   	MongoDB.useSession(DefaultMongoIdentifier) ( db => {
@@ -358,7 +344,7 @@ object JsonExamples extends Specification {
 
 			// try updating against the unique key
 			val o3 = ("$set" -> ("name" -> "MongoDB")) // set name
-			TestCollection.update(qry, o3, db, ("upsert", true))
+			TestCollection.update(qry, o3, db, Upsert)
 			db.getLastError.get("err").toString must startWith("E12011 can't $inc/$set an indexed field")
 			db.getLastError.get("n") must_== 0
 
@@ -366,12 +352,12 @@ object JsonExamples extends Specification {
 			val key = "name"
 			val regex = "^Mongo"
 			val dbo = MongoHelpers.dbObjectBuilder.add(key, Pattern.compile(regex)).get
-			val lst = TestCollection.findAll(dbo, 0, 0, None)
+			val lst = TestCollection.findAll(dbo)
 			lst.size must_== 2
 
 			// use regex and another clause
 			val dbo2 = MongoHelpers.dbObjectBuilder.add(key, Pattern.compile(regex)).add("count", 1).get
-			val lst2 = TestCollection.findAll(dbo2, 0, 0, None)
+			val lst2 = TestCollection.findAll(dbo2)
 			lst2.size must_== 1
 
 			if (!debug) {
@@ -391,7 +377,7 @@ object JsonExamples extends Specification {
 				coll.drop
 			})
 			MongoDB.useCollection(Person.mongoIdentifier, Person.collectionName) ( coll => {
-				coll.drop
+				//coll.drop
 			})
 			MongoDB.useCollection(TestCollection.mongoIdentifier, TestCollection.collectionName) ( coll => {
 				coll.drop
@@ -400,28 +386,31 @@ object JsonExamples extends Specification {
 				coll.drop
 			})
 		}
+
+		// clear the mongo instances
+		MongoDB.close
   }
 }
 
+/*
+* MongoIdentifiers
+*/
+object TestDBa extends MongoIdentifier {
+	val jndiName = "test_a"
+}
+object TestDBb extends MongoIdentifier {
+	val jndiName = "test_b"
+}
+
+/*
+* Case classes
+*/
 case class SimplePerson(_id: String, name: String, age: Int) extends MongoDocument[SimplePerson] {
 	def meta = SimplePerson
 }
-
 object SimplePerson extends MongoDocumentMeta[SimplePerson] {
-
 	override val collectionName = "simplepersons"
-
 	override def mongoIdentifier = DefaultMongoIdentifier
-
-	def fromJson(in: JValue): SimplePerson = {
-		implicit val formats = MongoFormats
-		in.extract[SimplePerson]
-	}
-
-	def toJson(per: SimplePerson): JValue = {
-		("_id" -> per._id) ~ ("name" -> per.name) ~ ("age" -> per.age)
-	}
-
 }
 
 case class Address(street: String, city: String)
@@ -434,29 +423,7 @@ case class Person(_id: String, name: String, age: Int, address: Address, childre
 }
 
 object Person extends MongoDocumentMeta[Person] {
-
-	implicit val formats = MongoFormats
-
-	def fromJson(in: JValue): Person = {
-		in.extract[Person]
-	}
-
-	def toJson(per: Person): JValue = {
-		("_id" -> per._id) ~
-		("name" -> per.name) ~
-		("age" -> per.age) ~
-		("address" -> (("street" -> per.address.street) ~ ("city" -> per.address.city))) ~
-		("children" ->
-			per.children.map { c =>
-				(
-					("name" -> c.name) ~
-					("age" -> c.age) ~
-					("birthdate" -> c.birthdate.map(formats.dateFormat.format(_)))
-				)
-			}
-		)
-	}
-
+	override def mongoIdentifier = TestDBa
 }
 
 // Mongo tutorial classes
@@ -469,22 +436,8 @@ case class TestCollection(_id: String, name: String, dbtype: String, count: Int,
 
 object TestCollection extends MongoDocumentMeta[TestCollection] {
 
-	implicit val formats = MongoFormats
-
 	// create a unique index on name
-	ensureIndex(("name" -> 1), ("unique", true))
-
-	def fromJson(in: JValue): TestCollection = {
-		in.extract[TestCollection]
-	}
-
-	def toJson(tc: TestCollection): JValue = {
-		("_id" -> tc._id) ~
-		("name" -> tc.name) ~
-		("dbtype" -> tc.dbtype) ~
-		("count" -> tc.count) ~
-		("info" -> (("x" -> tc.info.x) ~ ("y" -> tc.info.y)))
-	}
+	ensureIndex(("name" -> 1), Unique)
 
 }
 
@@ -495,18 +448,6 @@ case class IDoc(_id: String, i: Int) extends MongoDocument[IDoc] {
 
 object IDoc extends MongoDocumentMeta[IDoc] {
 
-	implicit val formats = MongoFormats
-
-	// create an index on "i", ascending
-	ensureIndex(("i" -> 1))
-
-	def fromJson(in: JValue): IDoc = {
-		in.extract[IDoc]
-	}
-
-	def toJson(tc: IDoc): JValue = {
-		("_id" -> tc._id) ~
-		("i" -> tc.i)
-	}
-
+	// create an index on "i", ascending with name and Force
+	ensureIndex(("i" -> 1), "i_ix1", Force)
 }
