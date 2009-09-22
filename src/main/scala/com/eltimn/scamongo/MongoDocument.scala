@@ -98,7 +98,7 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/**
 	* Find all documents using a DBObject query
 	*/
-	def findAll(qry: DBObject, sort: Option[JObject], opts: FindOption*): List[BaseDocument] = {
+	private def findAll(qry: DBObject, sort: Option[JObject], opts: FindOption*): List[BaseDocument] = {
 		var ret = new ListBuffer[BaseDocument]
 		val findOpts = opts.toList
 
@@ -202,12 +202,6 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newbd, db, opts :_*)
 		})
-	}
-
-	/*
-	* Convert a DBObject into a case class
-	*/
-	private def fromDBObject {
 	}
 
 }

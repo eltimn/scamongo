@@ -88,7 +88,7 @@ object RecordExamples extends Specification {
 			if (!debug) {
 				/** drop the collections */
 				MongoDB.useCollection(TestRecord.mongoIdentifier, TestRecord.collectionName) ( coll => {
-					//coll.drop
+					coll.drop
 				})
 			}
 
@@ -107,7 +107,7 @@ class TestRecord extends MongoRecord[TestRecord] {
 	def id = _id.value
 	
 	object _id extends StringField(this, 24) {
-		override def defaultValue = MongoId().toString
+		override def defaultValue = MongoHelpers.newUUID
 	}
 
 	//object binaryfield extends BinaryField(this)

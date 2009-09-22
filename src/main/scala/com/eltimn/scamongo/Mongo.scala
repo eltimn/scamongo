@@ -18,11 +18,9 @@ package com.eltimn.scamongo
 
 /*
 * TODO: MongoField - setFromString
-* TODO: rewrite jValueToDBObject and dbObjectToJValue to skip mongo parser/serializer
-* and go directly to/from JValues.
-* TOD: Go directly from Case Class to DBObject and vice versa (requires copying 
+* TOD: Go directly from Case Class to DBObject and vice versa (requires copying
 * code from lift-json)  Is this worth it if jValueToDBObject is updated?
-* TODO: ObjectId and DBRef compatiblity
+* TODO: ObjectId and DBRef compatiblity. Is this worth it?
 * TODO: Test all data types
 * TODO: DefaultFormats -> MongoFormats
 * TODO: Multiple mongos examples
@@ -32,7 +30,7 @@ import scala.collection.immutable.HashSet
 import scala.collection.mutable.{HashMap => MutableHashMap, ListBuffer}
 import scala.reflect.Manifest
 
-import net.liftweb.json.{DateFormat, DefaultFormats}
+import net.liftweb.json.{DateFormat, DefaultFormats, Formats}
 import net.liftweb.json.JsonAST.JObject
 
 import com.mongodb._
@@ -159,7 +157,7 @@ object MongoDB {
       db.requestDone
     }
   }
-  
+
   //
   def close {
   	mongos.clear
@@ -174,16 +172,20 @@ object MongoFormats extends DefaultFormats
 object MongoHelpers {
 
 	import java.util.UUID
-
+/*
 	import com.mongodb.util.JSON // Mongo parser/serializer
 	import net.liftweb.json.JsonAST
-	import net.liftweb.json.JsonAST.JObject
 	import net.liftweb.json.JsonDSL
 	import net.liftweb.json.JsonParser
-
+*/
 	/* ID helper methods */
   def newMongoId = ObjectId.get.toString
   def newUUID = UUID.randomUUID.toString
+
+  /*
+  * Get a BasicDBObjectBuilder. Use this for doing regex queries.
+  */
+  def dbObjectBuilder: BasicDBObjectBuilder = BasicDBObjectBuilder.start
 
   /*
   * Convert a JObject to a DBObject
@@ -194,21 +196,17 @@ object MongoHelpers {
   *
   */
   def jObjectToDBObject(in: JObject): DBObject = {
-  	//println(JsonDSL.compact(JsonAST.render(in)))
-  	JSON.parse(JsonDSL.compact(JsonAST.render(in)))
+  	//JSON.parse(JsonDSL.compact(JsonAST.render(in)))
+  	Parser.parse(in)
   }
 
   /*
   * Convert a DBObject to a JObject
   */
   def dbObjectToJObject(in: DBObject): JObject = {
-  	JsonParser.parse(JSON.serialize(in)).asInstanceOf[JObject]
+  	//JsonParser.parse(JSON.serialize(in)).asInstanceOf[JObject]
+  	Parser.serialize(in)(MongoFormats).asInstanceOf[JObject]
   }
-
-  /*
-  * Get a BasicDBObjectBuilder. Use this for doing regex queries.
-  */
-  def dbObjectBuilder: BasicDBObjectBuilder = BasicDBObjectBuilder.start
 }
 
 /*
@@ -282,7 +280,7 @@ trait MongoMeta[BaseDocument] {
 	* Count documents by JValue query
 	*/
 	def count(qry: JObject):Long = count(jObjectToDBObject(qry))
-	
+
 	// delete a document
 	def delete(k: String, v: Any) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
@@ -357,7 +355,7 @@ case object Upsert extends UpdateOption
 case object Apply extends UpdateOption
 
 /*
-* These traits provide lift-json related convienece methods for case classes 
+* These traits provide lift-json related convienece methods for case classes
 * and their companion objects
 */
 trait JsonObject[BaseDocument] {
@@ -385,11 +383,10 @@ class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 	def toJObject(in: BaseDocument): JObject = serialize(in)(formats).asInstanceOf[JObject]
 }
 
-/* */
-case class MongoId(id: String) {
-  
+/* 
+case class MongoId(_id: String) {
+	/*
   override def toString() = id //oid.toString //"ObjectId(\""+oid.toString+"\")"
-  /*
   override def hashCode() = oid.hashCode()
   override def equals(other: Any): Boolean = other match {
   	case otherOid: ObjectId if (otherOid.equals(this.oid)) => true
@@ -403,10 +400,10 @@ object MongoId {
 	def apply(s: String): MongoId = {
     new MongoId(new ObjectId(s))
   }
-*/  
+*/
   def apply(): MongoId = {
     new MongoId(ObjectId.get.toString)
   }
 
 }
-
+*/

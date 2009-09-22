@@ -27,10 +27,9 @@ import net.liftweb.json.JsonAST._
 import net.liftweb.json.JsonParser._
 import net.liftweb.json.JsonDSL._
 
-//import com.mongodb.ObjectId
+import com.mongodb.ObjectId
 
-//class JsonExampleTest extends Runner(Examples) with JUnit
-
+//class JsonExampleTest extends Runner(JsonExamples) with JUnit
 object JsonExamples extends Specification {
 
 	doFirst { // create the Mongo instances
@@ -44,15 +43,6 @@ object JsonExamples extends Specification {
 	val debug = false
 
 	def date(s: String) = MongoFormats.dateFormat.parse(s).get
-
-	val primitives = compact(render({
-		("str" -> "109") ~
-		("int" -> 2147483647) ~
-		("lng" -> 9223372036854775807L) ~
-		("bool" -> true) ~
-		("dbl" -> 127.5) ~
-		("null" -> null)
-	}))
 
 	"Simple Person example" in {
 
@@ -176,7 +166,7 @@ object JsonExamples extends Specification {
 			p.delete
 
 			pFromDb.isEmpty must_== true
-		}
+		}		
   }
 
   "Mongo tutorial example" in {
@@ -307,6 +297,7 @@ object JsonExamples extends Specification {
 		IDoc.delete(("i" -> ("$gt" -> 50)))
 
 		IDoc.findAll.length must_== 50
+
   }
 
   "Mongo useSession example" in {
@@ -369,6 +360,28 @@ object JsonExamples extends Specification {
 
 		})
   }
+  
+  "Primitives example" in {
+  	
+  	val p = Primitive(MongoHelpers.newMongoId, 2147483647, 2147483648L, 1797693, 3.4028235F, 1000, 0, true, 512, date("2004-09-04T18:06:22Z"))
+
+		// save it
+		p.save
+
+		// retrieve it
+		def pFromDb = Primitive.find("_id", p._id)
+
+		pFromDb.isDefined must_== true
+
+		p mustEqual pFromDb.get
+
+		if (!debug) {
+			// delete it
+			p.delete
+
+			pFromDb.isEmpty must_== true
+		}
+	}	
 
   doLast {
   	if (!debug) {
@@ -377,12 +390,15 @@ object JsonExamples extends Specification {
 				coll.drop
 			})
 			MongoDB.useCollection(Person.mongoIdentifier, Person.collectionName) ( coll => {
-				//coll.drop
+				coll.drop
 			})
 			MongoDB.useCollection(TestCollection.mongoIdentifier, TestCollection.collectionName) ( coll => {
 				coll.drop
 			})
 			MongoDB.useCollection(IDoc.mongoIdentifier, IDoc.collectionName) ( coll => {
+				coll.drop
+			})
+			MongoDB.useCollection(Primitive.mongoIdentifier, Primitive.collectionName) ( coll => {
 				coll.drop
 			})
 		}
@@ -451,3 +467,24 @@ object IDoc extends MongoDocumentMeta[IDoc] {
 	// create an index on "i", ascending with name and Force
 	ensureIndex(("i" -> 1), "i_ix1", Force)
 }
+
+/*
+* mongo-java-driver is not compatible with numbers that have an e in them
+*/
+case class Primitive(
+	_id: String,
+	intfield: Int,
+	longfield: Long,
+	doublefield: Double,
+	floatfield: Float,
+	bigintfield: BigInt,
+	bytefield: Byte,
+	booleanfield: Boolean,
+	shortfield: Short,
+	datefield: Date
+) extends MongoDocument[Primitive] {
+
+	def meta = Primitive
+}
+
+object Primitive extends MongoDocumentMeta[Primitive]
