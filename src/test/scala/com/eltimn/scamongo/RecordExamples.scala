@@ -26,8 +26,10 @@ import net.liftweb.util.{Box, Full}
 import org.specs.Specification
 import org.specs.runner.{Runner, JUnit}
 
-import com.mongodb.ObjectId
+import com.mongodb.{BasicDBObject, BasicDBList, ObjectId}
 import com.mongodb.util.JSON
+
+import field._
 
 //class RecordExampleTest extends Runner(Examples) with JUnit
 object RecordExamples extends Specification {
@@ -42,7 +44,12 @@ object RecordExamples extends Specification {
 
 	"TestRecord example" in {
     val tr = TestRecord.createRecord
-    tr.stringfield.set("tr")
+    tr.stringfield.set("test record string field")
+    tr.emailfield.set("test")
+    tr.validate.size must_== 2
+    tr.passwordfield.set("test")
+    tr.emailfield.set("test@example.com")
+    tr.validate.size must_== 0
     val newId = tr.id
 
     val per = RPerson("joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(now)), Child("Mazy", 3, None)))
@@ -83,29 +90,99 @@ object RecordExamples extends Specification {
 				MongoFormats.dateFormat.format(per.children(i).birthdate.get)
 			}
 		}
-
-		doLast {
-			if (!debug) {
-				/** drop the collections */
-				MongoDB.useCollection(TestRecord.mongoIdentifier, TestRecord.collectionName) ( coll => {
-					coll.drop
-				})
-			}
-
-			// clear the mongo instances
-			MongoDB.close
-		}
   }
+
+  "Ref example" in {
+
+  	val ref1 = RefDoc.createRecord
+  	val ref2 = RefDoc.createRecord
+
+  	ref1.save must_== ref1
+  	ref2.save must_== ref2
+
+  	val md1 = MainDoc.createRecord
+  	val md2 = MainDoc.createRecord
+  	val md3 = MainDoc.createRecord
+  	val md4 = MainDoc.createRecord
+
+  	md1.name.set("md1")
+  	md2.name.set("md2")
+  	md3.name.set("md3")
+  	md4.name.set("md4")
+
+  	md1.refdoc.set(ref1.getRef)
+  	md2.refdoc.set(ref1.getRef)
+  	md3.refdoc.set(ref2.getRef)
+  	md4.refdoc.set(ref2.getRef)
+
+  	md1.save must_== md1
+  	md2.save must_== md2
+  	md3.save must_== md3
+  	md4.save must_== md4
+
+  	MainDoc.count must_== 4
+  	RefDoc.count must_== 2
+
+  	// fetch a refdoc
+  	val refFromFetch = md1.refdoc.fetch
+  	refFromFetch.isDefined must_== true
+		refFromFetch.open_!.id must_== ref1.id
+
+		// query for a single doc with a JObject query
+		val md1a = MainDoc.find(("name") -> "md1")
+		md1a.isDefined must_== true
+		md1a.foreach(o => o.id must_== md1.id)
+
+		// query for a single doc with a k, v query
+		val md1b = MainDoc.find("_id", md1.id)
+		md1b.isDefined must_== true
+		md1b.foreach(o => o.id must_== md1.id)
+
+		// find all documents
+		MainDoc.findAll.size must_== 4
+		RefDoc.findAll.size must_== 2
+
+		// find all documents with JObject query
+		val mdq1 = MainDoc.findAll(("name" -> "md1"))
+		mdq1.size must_== 1
+
+		// find all documents with $in query, sorted
+		val names = new BasicDBList
+		names.add("md1")
+		names.add("md2")
+		val qry = new BasicDBObject("name", new BasicDBObject("$in", names))
+		val mdq2 = MainDoc.findAll(qry, ("name" -> -1))
+		mdq2.size must_== 2
+		mdq2.first.id must_== md2.id
+
+		// Find all documents using a k, v query
+		val mdq3 = MainDoc.findAll("_id", md1.id)
+		mdq3.size must_== 1
+
+
+  }
+
+  doLast {
+  	if (!debug) {
+			/** drop the collections */
+			TestRecord.drop
+			MainDoc.drop
+  		RefDoc.drop
+  	}
+
+  	// clear the mongo instances
+		MongoDB.close
+	}
 }
 
 class TestRecord extends MongoRecord[TestRecord] {
 
-	import MongoHelpers._
+	//import MongoHelpers._
 
 	def meta = TestRecord
-	
+
 	def id = _id.value
-	
+
 	object _id extends StringField(this, 24) {
 		override def defaultValue = MongoHelpers.newUUID
 	}
@@ -132,9 +209,9 @@ class TestRecord extends MongoRecord[TestRecord] {
 
 	/* CaseClassField
 	object person2 extends CaseClassField[TestRecord, RPerson](this) {
-	
+
 		def defaultValue = RPerson("", 0, Address("", ""), List())
-		
+
 		def setFromAny(in: Any): Box[RPerson] = in match {
 			case jv: CaseType => Full(set(jv))
 			case Some(jv: CaseType) => Full(set(jv))
@@ -159,9 +236,35 @@ object TestRecord extends TestRecord with MongoMetaRecord[TestRecord]
 
 case class RPerson(name: String, age: Int, address: Address, children: List[Child])
 	extends JsonObject[RPerson] {
-	
 	def meta = RPerson
-	
 }
 
 object RPerson extends JsonObjectMeta[RPerson]
+
+class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
+
+	def meta = MainDoc
+
+	//import field._
+	//object _id extends MongoIdField(this)
+	object name extends StringField(this, 12)
+
+	object refdoc extends MongoRefField(this) {
+
+		def fetch = {
+			RefDoc.find(new ObjectId(value.id))
+		}
+	}
+}
+
+object MainDoc extends MainDoc with MongoMetaRecord[MainDoc] {
+	//override def mongoIdentifier = TestDBb
+	//override def collectionName = "mymaindocs"
+}
+
+class RefDoc extends MongoRecord[RefDoc] with MongoId[RefDoc] {
+	def meta = RefDoc
+}
+
+object RefDoc extends RefDoc with MongoMetaRecord[RefDoc]
+

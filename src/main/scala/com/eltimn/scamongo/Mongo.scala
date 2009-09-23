@@ -17,13 +17,24 @@ package com.eltimn.scamongo
  */
 
 /*
-* TODO: MongoField - setFromString
-* TOD: Go directly from Case Class to DBObject and vice versa (requires copying
-* code from lift-json)  Is this worth it if jValueToDBObject is updated?
-* TODO: ObjectId and DBRef compatiblity. Is this worth it?
+* Record
+* TODO: findAll, save, update, saveSafe, updateSafe methods
+* TODO: useSession example
+* TODO: ListField
+* TODO: PasswordField
+* TODO: CaseClassField
+* TODO: save, saved_?, runSafe
+* TODO: MongoRefField fetch
+* Document
+* TODO: DBRef support
+* TODO: save, update safe. Return Option.
+* General
+* TODO: use Maps for queries ? Create class that extends DBObject ?
+* TODO: MongoAuth
 * TODO: Test all data types
-* TODO: DefaultFormats -> MongoFormats
-* TODO: Multiple mongos examples
+* TODO: DefaultFormats -> MongoFormats (???)
+* TODO: MongoAdmin ?
+* TODO: Binary support
 */
 
 import scala.collection.immutable.HashSet
@@ -172,12 +183,7 @@ object MongoFormats extends DefaultFormats
 object MongoHelpers {
 
 	import java.util.UUID
-/*
-	import com.mongodb.util.JSON // Mongo parser/serializer
-	import net.liftweb.json.JsonAST
-	import net.liftweb.json.JsonDSL
-	import net.liftweb.json.JsonParser
-*/
+
 	/* ID helper methods */
   def newMongoId = ObjectId.get.toString
   def newUUID = UUID.randomUUID.toString
@@ -187,26 +193,6 @@ object MongoHelpers {
   */
   def dbObjectBuilder: BasicDBObjectBuilder = BasicDBObjectBuilder.start
 
-  /*
-  * Convert a JObject to a DBObject
-  *
-  * Mongo specific types
-  * ObjectId --> ObjectId("kdhlkdh8769879")
-  * DBRef -->
-  *
-  */
-  def jObjectToDBObject(in: JObject): DBObject = {
-  	//JSON.parse(JsonDSL.compact(JsonAST.render(in)))
-  	Parser.parse(in)
-  }
-
-  /*
-  * Convert a DBObject to a JObject
-  */
-  def dbObjectToJObject(in: DBObject): JObject = {
-  	//JsonParser.parse(JSON.serialize(in)).asInstanceOf[JObject]
-  	Parser.serialize(in)(MongoFormats).asInstanceOf[JObject]
-  }
 }
 
 /*
@@ -227,8 +213,6 @@ trait MongoIdentifier {
 */
 trait MongoMeta[BaseDocument] {
 
-	import MongoHelpers._
-
 	// class name has a $ at the end. because it's an object(?)
 	private lazy val _collectionName = {
 		getClass.getName.split("\\.").toList.last.replace("$", "")+"s"
@@ -243,7 +227,7 @@ trait MongoMeta[BaseDocument] {
 	* -- the collection namespace is flat from the database's perspective.
 	* From: http://www.mongodb.org/display/DOCS/Collections
 	*/
-	private def fixCollectionName(name: String) = name.toLowerCase match {
+	def fixCollectionName = _collectionName.toLowerCase match {
 		case name if (name.contains("$")) => name.replace("$", "_d_")
 		case name => name
 	}
@@ -253,9 +237,11 @@ trait MongoMeta[BaseDocument] {
 	* want to change the collection to something other than the name of
 	* the MongoDocument case class with an 's' appended to the end.
 	*/
-	def collectionName = fixCollectionName(_collectionName)
+	//def collectionName = fixCollectionName(_collectionName)
+	def collectionName: String = fixCollectionName
 
 	// override this to specify a MongoIdentifier for this MongoDocumnet type
+  //def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
   def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
 
   /*
@@ -279,7 +265,7 @@ trait MongoMeta[BaseDocument] {
 	/*
 	* Count documents by JValue query
 	*/
-	def count(qry: JObject):Long = count(jObjectToDBObject(qry))
+	def count(qry: JObject):Long = count(JObjectParser.parse(qry))
 
 	// delete a document
 	def delete(k: String, v: Any) {
@@ -293,17 +279,16 @@ trait MongoMeta[BaseDocument] {
 	*/
 	def delete(json: JObject) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-			coll.remove(jObjectToDBObject(json))
+			coll.remove(JObjectParser.parse(json))
 		)
 	}
-
-	/* drop this document collection
+	
+	/* drop this document collection */
 	def drop {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
 			coll.drop
 		)
 	}
-	*/
 
 	/*
 	* Ensure an index exists
@@ -311,7 +296,7 @@ trait MongoMeta[BaseDocument] {
 	def ensureIndex(keys: JObject, opts: IndexOption*) {
 		val ixOpts = opts.toList
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.ensureIndex(jObjectToDBObject(keys),
+			coll.ensureIndex(JObjectParser.parse(keys),
 				ixOpts.find(_ == Force).map(x => true).getOrElse(false),
 				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
 			)
@@ -324,9 +309,26 @@ trait MongoMeta[BaseDocument] {
 	def ensureIndex(keys: JObject, name: String, opts: IndexOption*) {
 		val ixOpts = opts.toList
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.ensureIndex(jObjectToDBObject(keys), name,
+			coll.ensureIndex(JObjectParser.parse(keys), name,
 				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
 			)
+		})
+	}
+	
+	/**
+	* Find all rows using a DBObject query. Internal use only.
+	*/
+	def getCursor(qry: DBObject, sort: Option[JObject], opts: FindOption*): DBCursor = {
+		val findOpts = opts.toList
+		
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
+			val cur = coll.find(qry).limit(
+				findOpts.find(_.isInstanceOf[Limit]).map(x => x.value).getOrElse(0)
+			).skip(
+				findOpts.find(_.isInstanceOf[Skip]).map(x => x.value).getOrElse(0)
+			)
+			sort.foreach( s => cur.sort(JObjectParser.parse(s)))
+			cur
 		})
 	}
 }
@@ -382,28 +384,3 @@ class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 	// convert class to a json object
 	def toJObject(in: BaseDocument): JObject = serialize(in)(formats).asInstanceOf[JObject]
 }
-
-/* 
-case class MongoId(_id: String) {
-	/*
-  override def toString() = id //oid.toString //"ObjectId(\""+oid.toString+"\")"
-  override def hashCode() = oid.hashCode()
-  override def equals(other: Any): Boolean = other match {
-  	case otherOid: ObjectId if (otherOid.equals(this.oid)) => true
-  	case _ => false
-  }
-  */
-}
-
-object MongoId {
-/*
-	def apply(s: String): MongoId = {
-    new MongoId(new ObjectId(s))
-  }
-*/
-  def apply(): MongoId = {
-    new MongoId(ObjectId.get.toString)
-  }
-
-}
-*/

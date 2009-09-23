@@ -26,13 +26,13 @@ import net.liftweb.json.JsonAST._
 
 import com.mongodb.{BasicDBObject, BasicDBList, DBObject}
 
-private[scamongo] object Parser {
+private[scamongo] object JObjectParser {
 
 	/*
 	* Parse a JObject into a DBObject
 	*/
 	def parse(jo: JObject): DBObject = {
-		JObjectParser.parse(jo)
+		Parser.parse(jo)
   }
 
 	/*
@@ -61,7 +61,7 @@ private[scamongo] object Parser {
 		}
   }
 
-	object JObjectParser {
+	object Parser {
 
 		def parse(jo: JObject): DBObject = {
 			parseObject(jo.obj)

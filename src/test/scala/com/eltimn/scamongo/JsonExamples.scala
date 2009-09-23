@@ -159,7 +159,9 @@ object JsonExamples extends Specification {
 
 		pFromDb.isDefined must_== true
 
-		p mustEqual pFromDb.get
+		p must_== pFromDb.get
+		
+		Person.count must_== 1
 
 		if (!debug) {
 			// delete it
@@ -386,21 +388,11 @@ object JsonExamples extends Specification {
   doLast {
   	if (!debug) {
 			/** drop the collections */
-			MongoDB.useCollection(SimplePerson.mongoIdentifier, SimplePerson.collectionName) ( coll => {
-				coll.drop
-			})
-			MongoDB.useCollection(Person.mongoIdentifier, Person.collectionName) ( coll => {
-				coll.drop
-			})
-			MongoDB.useCollection(TestCollection.mongoIdentifier, TestCollection.collectionName) ( coll => {
-				coll.drop
-			})
-			MongoDB.useCollection(IDoc.mongoIdentifier, IDoc.collectionName) ( coll => {
-				coll.drop
-			})
-			MongoDB.useCollection(Primitive.mongoIdentifier, Primitive.collectionName) ( coll => {
-				coll.drop
-			})
+			SimplePerson.drop
+			Person.drop
+			TestCollection.drop
+			IDoc.drop
+			Primitive.drop
 		}
 
 		// clear the mongo instances
@@ -440,6 +432,7 @@ case class Person(_id: String, name: String, age: Int, address: Address, childre
 
 object Person extends MongoDocumentMeta[Person] {
 	override def mongoIdentifier = TestDBa
+	override def collectionName = "mypersons"
 }
 
 // Mongo tutorial classes

@@ -37,22 +37,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	//def afterCommit: List[BaseRecord => Unit] = Nil
 
 	/**
-   * Creates a new, empty record
-
-  override def createRecord: BaseRecord = {
-    super.createRecord
-  }*/
-
-  /**
-   * Creates a new record from a JSON construct
-   *
-   * @param json - the stringified JSON stucture
-
-  override def createRecord(json: String): Box[BaseRecord] = {
-    super.createRecord(json)
-  }*/
-
-	/**
 	* Creates a new record from a DBObject. For internal use only.
 	*
 	* @param obj - the DBObject
@@ -62,8 +46,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		rec.runSafe {
 			introspect(rec, rec.getClass.getMethods) {case (v, mf) =>}
 		}
-		// convert to json using mongo's parser, then populate record via fromJson method
-		//rec.fromJSON(JSON.serialize(dbo))
 		rec.fromDBObject(dbo) // convert to this using fromDBObject method
 	}
 
@@ -119,22 +101,22 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 
 		find(qry)
 	}*/
-
+	
+	/**
+	* Find a single row by an ObjectId
+	*/
+	def find(oid: ObjectId): Box[BaseRecord] = find(new BasicDBObject("_id", oid))
+	
+	/**
+	* Find a single document by a qry using a json value
+	*/
+	def find(json: JObject): Box[BaseRecord] = find(JObjectParser.parse(json))
+	
 	/**
 	* Find a single row by a qry using String key and Any value
 	*/
 	def find(k: String, o: Any): Box[BaseRecord] = find(new BasicDBObject(k, o))
 
-	/**
-	* Find a single row by a DBRefBase
-
-	def find(oid: DBRefBase): Box[BaseRecord]= {
-		oid.fetch match {
-			case null => Empty
-			case obj => createRecord(obj)
-		}
-	}
-*/
 	/**
 	* Find all rows in this collection
 	*/
@@ -156,39 +138,53 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/**
 	* Find all rows using a DBObject query. Internal use only.
 	*/
-	private def findAll(qry: DBObject): List[BaseRecord] = {
+	private def findAll(qry: DBObject, sort: Option[JObject], opts: FindOption*): List[BaseRecord] = {
 		var ret = new ListBuffer[BaseRecord]
-
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			val cur = coll.find(qry)
-			while (cur.hasNext) {
-				createRecord(cur.next) match {
-					case Full(obj) => ret += obj
-					case _ =>
-				}
+		val cur = getCursor(qry, sort, opts :_*)
+		
+		while (cur.hasNext) {
+			createRecord(cur.next) match {
+				case Full(obj) => ret += obj
+				case _ =>
 			}
-		})
+		}
 		ret.toList
+	}
+	
+	/**
+	* Find all documents using a DBObject query. These are for passing in regex queries.
+	*/
+	def findAll(qry: DBObject, opts: FindOption*): List[BaseRecord] =
+		findAll(qry, None, opts :_*)
+
+	/**
+	* Find all documents using a JObject query with sort
+	*/
+	def findAll(qry: DBObject, sort: JObject, opts: FindOption*): List[BaseRecord] =
+		findAll(qry, Some(sort), opts :_*)
+
+	/**
+	* Find all documents using a JObject query
+	*/
+	def findAll(qry: JObject, opts: FindOption*): List[BaseRecord] = {
+		findAll(JObjectParser.parse(qry), None, opts :_*)
 	}
 
 	/**
-	* Find all rows using a "query" via a Map
-
-	def findAll(qrymap: Map[String,String]): List[BaseRecord] = {
-		// convert the map to a DBObject
-		val qry = new BasicDBObject
-		for (k <- qrymap.keys) {
-			qry.put(k.toString, qrymap(k.toString))
-		}
-
-		// do the query
-		findAll(qry)
-	}*/
+	* Find all documents using a JObject query with sort
+	*/
+	def findAll(qry: JObject, sort: JObject, opts: FindOption*): List[BaseRecord] =
+		findAll(JObjectParser.parse(qry), Some(sort), opts :_*)
 
 	/**
-	* Find all rows using a "query" via k, Any
+	* Find all documents using a k, v query
 	*/
-	def findAll(k: String, o: Any): List[BaseRecord] = findAll(new BasicDBObject(k, o))
+	def findAll(k: String, o: Any, opts: FindOption*): List[BaseRecord] = findAll(new BasicDBObject(k, o), None, opts :_*)
+
+	/**
+	* Find all documents using a k, v query with sort
+	*/
+	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseRecord] = findAll(new BasicDBObject(k, o), Some(sort), opts :_*)
 
 	/**
 	* Save the instance in the appropriate backing store
@@ -266,8 +262,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	*/
 	private def toDBObject(inst: BaseRecord): DBObject = {
 
-		import MongoHelpers._
-
 		val dbo = new BasicDBObject
 
 		for (f <- fields) {
@@ -283,7 +277,12 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 					case n: Int => dbo.put(f.name, n)
 					case l: Long => dbo.put(f.name, l)
 					case s: String => dbo.put(f.name, s)
-					case jv: JObject => dbo.put(f.name, jObjectToDBObject(jv))
+					case o: ObjectId => dbo.put(f.name, o)
+					case DBRef(c, i) => {
+						val ref = new BasicDBObject("ref", c).append("id", i)
+						dbo.put(f.name, ref)
+					}
+					case jv: JObject => dbo.put(f.name, JObjectParser.parse(jv))
 					case _ => dbo.put(f.name, field.toString)
 				}
 

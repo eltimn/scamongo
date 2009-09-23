@@ -81,26 +81,6 @@ trait MongoFieldFlavor[MyType] {
 
 }
 
-/**
-* Mix this into a Record to add a MongoIdField
-* It stores the String returned from an ObjectId and not the ObjectId itself.
-
-trait MongoId[OwnerType <: MongoRecord[OwnerType]] {
-  self: OwnerType =>
-
-  //object _id extends MongoIdField[OwnerType](this.asInstanceOf[OwnerType])
-  /* or just */
-  object _id extends StringField[OwnerType](this.asInstanceOf[OwnerType], 24) {
-  	override def defaultValue = (new ObjectId).toString
-  }
-
-  // convenience method that returns the value of _id
-  def id = _id.value
-
-  //def getDbRef = new DBRefBase(owner.meta.getDb, owner.meta.collectionName, value)
-  //def getRef = MongoDbRef(this.asInstanceOf[OwnerType].owner.meta.getDb.toString, owner.meta.collectionName, this.asInstanceOf[OwnerType].value)
-}
-*/
 
 /**
  * List field. This version uses a Scala List

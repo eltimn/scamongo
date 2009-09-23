@@ -44,10 +44,10 @@ trait MongoDocument[BaseDocument] extends JsonObject[BaseDocument] {
 */
 trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with MongoMeta[BaseDocument] {
 
-	import MongoHelpers._
-
-	def create(dbo: DBObject): BaseDocument = create(dbObjectToJObject(dbo))
-
+	def create(dbo: DBObject): BaseDocument = {
+		create(JObjectParser.serialize(dbo)(MongoFormats).asInstanceOf[JObject])
+	}
+	
 	/**
 	* Find a single document by _id object.
 	def find(a: Any): Option[BaseDocument] = a match {
@@ -78,7 +78,7 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/**
 	* Find a single document by a qry using a json value
 	*/
-	def find(json: JObject): Option[BaseDocument] = find(jObjectToDBObject(json))
+	def find(json: JObject): Option[BaseDocument] = find(JObjectParser.parse(json))
 
 	/**
 	* Find all documents in this collection
@@ -98,21 +98,13 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/**
 	* Find all documents using a DBObject query
 	*/
-	private def findAll(qry: DBObject, sort: Option[JObject], opts: FindOption*): List[BaseDocument] = {
+	def findAll(qry: DBObject, sort: Option[JObject], opts: FindOption*): List[BaseDocument] = {
 		var ret = new ListBuffer[BaseDocument]
-		val findOpts = opts.toList
+		val cur = getCursor(qry, sort, opts :_*)
 
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			val cur = coll.find(qry).limit(
-				findOpts.find(_.isInstanceOf[Limit]).map(x => x.value).getOrElse(0)
-			).skip(
-				findOpts.find(_.isInstanceOf[Skip]).map(x => x.value).getOrElse(0)
-			)
-			sort.foreach( s => cur.sort(jObjectToDBObject(s)))
-			while (cur.hasNext) {
-				ret += create(cur.next)
-			}
-		})
+		while (cur.hasNext) {
+			ret += create(cur.next)
+		}
 		ret.toList
 	}
 
@@ -132,13 +124,13 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	* Find all documents using a JObject query
 	*/
 	def findAll(qry: JObject, opts: FindOption*): List[BaseDocument] =
-		findAll(jObjectToDBObject(qry), None, opts :_*)
+		findAll(JObjectParser.parse(qry), None, opts :_*)
 
 	/**
 	* Find all documents using a JObject query with sort
 	*/
 	def findAll(qry: JObject, sort: JObject, opts: FindOption*): List[BaseDocument] =
-		findAll(jObjectToDBObject(qry), Some(sort), opts :_*)
+		findAll(JObjectParser.parse(qry), Some(sort), opts :_*)
 
 	/**
 	* Find all documents using a k, v query
@@ -163,20 +155,22 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	* Save a document to the db using the given Mongo instance
 	*/
 	def save(in: BaseDocument, db: DBBase): BaseDocument = {
-		create(dbObjectToJObject(db.getCollection(collectionName).save(jObjectToDBObject(toJObject(in)))))
+		create(db.getCollection(collectionName).save(JObjectParser.parse(toJObject(in))))
 	}
 
 	/*
-	* Update document with a JObject query using the given Mongo instance
+	* Update document with a JObject query using the given Mongo instance.
+	* For use with modifier operations $inc, $set, $push...
 	*/
 	def update(qry: JObject, newobj: JObject, db: DBBase, opts: UpdateOption*): JObject = {
 		val dboOpts = opts.toList
-		dbObjectToJObject(db.getCollection(collectionName).update(
-			jObjectToDBObject(qry),
-			jObjectToDBObject(newobj),
+		// these updates return the modifier object, not the object that was updated.
+		JObjectParser.serialize(db.getCollection(collectionName).update(
+			JObjectParser.parse(qry),
+			JObjectParser.parse(newobj),
 			dboOpts.find(_ == Upsert).map(x => true).getOrElse(false),
 			dboOpts.find(_ == Apply).map(x => true).getOrElse(false)
-		))
+		))(MongoFormats).asInstanceOf[JObject]
 	}
 
 	/*

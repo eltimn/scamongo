@@ -1,4 +1,4 @@
-package com.eltimn.scamongo
+package com.eltimn.scamongo.field
 
 /*
  * Copyright 2009 Tim Nelson
@@ -53,7 +53,7 @@ class JObjectField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
 	def owner = rec
 }
 
-
+/*
 class JObjectCaseField[OwnerType <: Record[OwnerType], CaseType](rec: OwnerType) extends Field[JObject, OwnerType] {
 
 	//import MongoHelpers._
@@ -85,3 +85,4 @@ class JObjectCaseField[OwnerType <: Record[OwnerType], CaseType](rec: OwnerType)
 
 	def owner = rec
 }
+*/

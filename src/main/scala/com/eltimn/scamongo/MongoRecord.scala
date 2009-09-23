@@ -20,7 +20,7 @@ import net.liftweb.util.{Box, Full}
 import net.liftweb.record.{MetaRecord, Record}
 import net.liftweb.record.field.StringField
 
-import com.mongodb.{BasicDBObject, DBObject}
+import com.mongodb.{BasicDBObject, DBObject, DBRefBase}
 
 trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	self: MyType =>
@@ -29,18 +29,6 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	* every mongo record must have an _id field. Override this with the value of your _id object.
 	*/
   def id: Any
-
-	/* 
-	object _id extends StringField[MyType](this.asInstanceOf[MyType], 24) {
-  	override def defaultValue = defaultId 
-  }
-  
-  // alias for _id.value
-  def id = _id.value
-  
-  // for overriding the default _id value
-  def defaultId = (new ObjectId).toString
-  */
 
 	/**
 	* Was this instance deleted from backing store?
@@ -56,6 +44,7 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	* Save the instance and return the instance
 	*/
 	def save(): MyType = {
+		
 		runSafe {
 			meta.save(this)
 		}
@@ -106,15 +95,29 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	def fromDBObject(obj: DBObject): Box[MyType] = {
 		meta.fromDBObject(this, obj)
 	}
-
-	/**
-	* Populate this record's fields with the values from a json string
-	*
-	* @param json - The json string
-	
-	def fromJson(json: String): Box[MyType] = {
-		meta.fromJson(this, json)
-	}*/
-
-	//def toJson: String = meta.toJson(this)
 }
+
+/**
+* Mix this into a Record to add a MongoIdField
+*/
+trait MongoId[OwnerType <: MongoRecord[OwnerType]] {
+  //self: OwnerType =>
+  
+  import field.MongoIdField
+  
+	object _id extends MongoIdField(this.asInstanceOf[OwnerType])
+
+  // convenience method that returns the value of _id
+  def id = _id.value
+  
+  //def getRefBase: DBRefBase = _id.getRefBase
+  def getRef: DBRef = _id.getRef
+
+  //def getDbRef = new DBRefBase(owner.meta.getDb, owner.meta.collectionName, value)
+  //def getRef = MongoDbRef(this.asInstanceOf[OwnerType].owner.meta.getDb.toString, owner.meta.collectionName, this.asInstanceOf[OwnerType].value)
+}
+
+/*
+* Need a way to map collectionName to Record class
+*/
+case class DBRef(ref: String, id: String)
