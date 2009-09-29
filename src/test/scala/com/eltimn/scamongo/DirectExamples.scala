@@ -41,7 +41,7 @@ object DirectExamples extends Specification {
 
 	val debug = false
 
-	def date(s: String) = MongoFormats.dateFormat.parse(s).get
+	def date(s: String) = DefaultFormats.dateFormat.parse(s).get
 
   "Mongo tutorial example" in {
 
@@ -293,9 +293,14 @@ object DirectExamples extends Specification {
 			MongoDB.useCollection(DefaultMongoIdentifier, "testCollection") ( coll => {
 				coll.drop
 			})
-			MongoDB.useCollection(DefaultMongoIdentifier, "iDoc") ( coll => {
+			MongoDB.useCollection("iDoc") ( coll => {
 				coll.drop
 			})
+			
+			// drop the database
+  		MongoDB.useAdmin {
+  			dba => dba.dropDatabase()
+  		}
 		}
 		
 		// clear the mongo instances

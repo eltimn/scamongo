@@ -73,18 +73,26 @@ abstract class CaseClassField[OwnerType <: Record[OwnerType], CaseType](rec: Own
  */
 trait MongoFieldFlavor[MyType] {
 
+	import com.mongodb.util.JSON
+
 	// convert this field's value into a DBObject so it can be stored in Mongo.
-  def toDBObject: DBObject
+  def asDBObject: DBObject
 
 	// set this field's value using a DBObject returned from Mongo.
 	def setFromDBObject(obj: DBObject): Box[MyType]
+	
+	// assume string is json
+	def setFromString(in: String): Box[MyType] = {
+		// use Mongo parser to convert to DBObject
+		setFromDBObject(JSON.parse(in))
+	}
 
 }
 
 
 /**
  * List field. This version uses a Scala List
-*/
+
 abstract class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerType)
 	extends Field[List[ListType], OwnerType] with MongoFieldFlavor[List[ListType]] {
 
@@ -143,7 +151,7 @@ abstract class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec
     }
   }*/
 }
-
+*/
 /*
 * Field represented as a Map
 

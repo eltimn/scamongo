@@ -17,22 +17,31 @@ package com.eltimn.scamongo
  */
 
 /*
+* TODO: Replace ListBuffers
 * Record
-* TODO: findAll, save, update, saveSafe, updateSafe methods
+* TODO: String validators & LocaleField.localeList
+* TODO: callbacks, before/after update, before/after insert
+* TODO: save, saved_?, runSafe, try-catch
+* TODO: Map serializer
+* TODO: ListField (Map serializer, JsonObjectListField)
+* TODO: saveSafe, updateSafe methods
 * TODO: useSession example
-* TODO: ListField
 * TODO: PasswordField
+* TODO: MapField (Map serializer)
+* TODO: OptionField (or Box)
 * TODO: CaseClassField
-* TODO: save, saved_?, runSafe
 * TODO: MongoRefField fetch
+* TODO: DBRefBase ($ - problems)
+* TODO: Calendar ??
 * Document
-* TODO: DBRef support
 * TODO: save, update safe. Return Option.
 * General
-* TODO: use Maps for queries ? Create class that extends DBObject ?
-* TODO: MongoAuth
+* TODO: eval ?
+* TODO: query DSL: By, In, >=, etc.
+* TODO: Boolean, ObjectId, Date, Map query examples 
+* TODO: master/slave, replication
+* TODO: MongoAuth example
 * TODO: Test all data types
-* TODO: DefaultFormats -> MongoFormats (???)
 * TODO: MongoAdmin ?
 * TODO: Binary support
 */
@@ -56,7 +65,7 @@ case object DefaultMongoIdentifier extends MongoIdentifier {
 /*
 * Wrapper for DBAddress
 */
-class MongoAddress(host: String, port: Int, name: String) {
+case class MongoAddress(host: String, port: Int, name: String) {
 
 	def toDBAddress = new DBAddress(host, port, name)
 
@@ -131,6 +140,32 @@ object MongoDB {
 
 		f(db)
   }
+  
+  /**
+  * Executes function {@code f} with the mongo admin named {@code name}.
+  */
+  def useAdmin[T](name: MongoIdentifier)(f: (MongoAdmin) => T): T = {
+
+  	val dba = getMongo(name) match {
+			case Some(mongo) => new MongoAdmin(mongo.getAddress)
+			case _ => throw new MongoException("Mongo not found: "+name.toString)
+		}
+
+		f(dba)
+  }
+
+  /**
+  * Executes function {@code f} with the default mongoIdentifier
+  */
+  def useAdmin[T] (f: (MongoAdmin) => T): T = {
+
+  	val dba = getMongo(DefaultMongoIdentifier) match {
+			case Some(mongo) => new MongoAdmin(mongo.getAddress)
+			case _ => throw new MongoException("Mongo not found: "+DefaultMongoIdentifier.toString)
+		}
+
+		f(dba)
+  }
 
   /**
   * Executes function {@code f} with the mongo named {@code name} and collection names {@code collectionName}.
@@ -139,7 +174,19 @@ object MongoDB {
   def useCollection[T](name: MongoIdentifier, collectionName: String)(f: (DBCollection) => T): T = {
     val coll = getCollection(name, collectionName) match {
 			case Some(collection) => collection
-			case _ => throw new MongoException("Collection not found: "+collectionName+". MongoIdentifier: "+name)
+			case _ => throw new MongoException("Collection not found: "+collectionName+". MongoIdentifier: "+name.toString)
+		}
+
+		f(coll)
+  }
+  
+  /**
+  * Same as above except uses DefaultMongoIdentifier
+	*/
+  def useCollection[T](collectionName: String)(f: (DBCollection) => T): T = {
+    val coll = getCollection(DefaultMongoIdentifier, collectionName) match {
+			case Some(collection) => collection
+			case _ => throw new MongoException("Collection not found: "+collectionName+". MongoIdentifier: "+DefaultMongoIdentifier.toString)
 		}
 
 		f(coll)
@@ -168,6 +215,27 @@ object MongoDB {
       db.requestDone
     }
   }
+  
+  /**
+  * Same as above except uses DefaultMongoIdentifier
+  */
+  def useSession[T](f: (DBBase) => T): T = {
+
+  	val db = getMongo(DefaultMongoIdentifier) match {
+			case Some(mongo) => mongo
+			case _ => throw new MongoException("Mongo not found: "+DefaultMongoIdentifier.toString)
+		}
+
+		// start the request
+		db.requestStart
+		try {
+      f(db)
+    }
+    finally {
+    	// end the request
+      db.requestDone
+    }
+  }
 
   //
   def close {
@@ -175,8 +243,15 @@ object MongoDB {
   }
 }
 
-object MongoFormats extends DefaultFormats
+/*
+* The default Mongo Formats
+* dates use UTC and this format
 
+object MongoFormats extends DefaultFormats {
+	import java.text.SimpleDateFormat
+	override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+}
+*/
 /*
 * Helper methods
 */
@@ -187,12 +262,6 @@ object MongoHelpers {
 	/* ID helper methods */
   def newMongoId = ObjectId.get.toString
   def newUUID = UUID.randomUUID.toString
-
-  /*
-  * Get a BasicDBObjectBuilder. Use this for doing regex queries.
-  */
-  def dbObjectBuilder: BasicDBObjectBuilder = BasicDBObjectBuilder.start
-
 }
 
 /*
@@ -243,6 +312,10 @@ trait MongoMeta[BaseDocument] {
 	// override this to specify a MongoIdentifier for this MongoDocumnet type
   //def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
   def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
+  
+  // override this for custom Formats (date)
+  def formats: Formats = DefaultFormats //.lossless
+	implicit lazy val _formats: Formats = formats
 
   /*
 	* Count all documents
@@ -263,9 +336,14 @@ trait MongoMeta[BaseDocument] {
 	}
 
 	/*
-	* Count documents by JValue query
+	* Count documents by JObject query
 	*/
 	def count(qry: JObject):Long = count(JObjectParser.parse(qry))
+
+	/*
+	* Count documents by Map query
+	*/
+	def count(qry: Map[String, Any]):Long = count(MapParser.parse(qry))
 
 	// delete a document
 	def delete(k: String, v: Any) {
@@ -275,14 +353,23 @@ trait MongoMeta[BaseDocument] {
 	}
 
 	/*
-	* Delete documents by a json object query
+	* Delete documents by a JObject query
 	*/
-	def delete(json: JObject) {
+	def delete(qry: JObject) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-			coll.remove(JObjectParser.parse(json))
+			coll.remove(JObjectParser.parse(qry))
 		)
 	}
-	
+
+	/*
+	* Delete documents by a Map query
+	*/
+	def delete(qry: Map[String, Any]) {
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
+			coll.remove(MapParser.parse(qry))
+		)
+	}
+
 	/* drop this document collection */
 	def drop {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
@@ -291,7 +378,7 @@ trait MongoMeta[BaseDocument] {
 	}
 
 	/*
-	* Ensure an index exists
+	* Ensure an index exists using a JObject
 	*/
 	def ensureIndex(keys: JObject, opts: IndexOption*) {
 		val ixOpts = opts.toList
@@ -304,7 +391,7 @@ trait MongoMeta[BaseDocument] {
 	}
 
 	/*
-	* Ensure an index exists, giving it a name
+	* Ensure an index exists using a JObject, giving it a name
 	*/
 	def ensureIndex(keys: JObject, name: String, opts: IndexOption*) {
 		val ixOpts = opts.toList
@@ -314,21 +401,104 @@ trait MongoMeta[BaseDocument] {
 			)
 		})
 	}
-	
+
+	/*
+	* Ensure an index exists using a Map
+	*/
+	def ensureIndex(keys: Map[String, Any], opts: IndexOption*) {
+		val ixOpts = opts.toList
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
+			coll.ensureIndex(MapParser.parse(keys),
+				ixOpts.find(_ == Force).map(x => true).getOrElse(false),
+				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
+			)
+		})
+	}
+
+	/*
+	* Ensure an index exists using a Map, giving it a name
+	*/
+	def ensureIndex(keys: Map[String, Any], name: String, opts: IndexOption*) {
+		val ixOpts = opts.toList
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
+			coll.ensureIndex(MapParser.parse(keys), name,
+				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
+			)
+		})
+	}
+
 	/**
 	* Find all rows using a DBObject query. Internal use only.
 	*/
-	def getCursor(qry: DBObject, sort: Option[JObject], opts: FindOption*): DBCursor = {
+	def getCursor(qry: DBObject, sort: Option[DBObject], opts: FindOption*): DBCursor = {
 		val findOpts = opts.toList
-		
+
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
 			val cur = coll.find(qry).limit(
 				findOpts.find(_.isInstanceOf[Limit]).map(x => x.value).getOrElse(0)
 			).skip(
 				findOpts.find(_.isInstanceOf[Skip]).map(x => x.value).getOrElse(0)
 			)
-			sort.foreach( s => cur.sort(JObjectParser.parse(s)))
+			sort.foreach( s => cur.sort(s))
 			cur
+		})
+	}
+
+	/*
+	* Update document with a DBObject query using the given Mongo instance.
+	*/
+	def update(qry: DBObject, newobj: DBObject, db: DBBase, opts: UpdateOption*): DBObject = {
+		val dboOpts = opts.toList
+		db.getCollection(collectionName).update(
+			qry,
+			newobj,
+			dboOpts.find(_ == Upsert).map(x => true).getOrElse(false),
+			dboOpts.find(_ == Apply).map(x => true).getOrElse(false)
+		)
+	}
+
+	/*
+	* Update document with a JObject query using the given Mongo instance.
+	* For use with modifier operations $inc, $set, $push...
+	*/
+	def update(qry: JObject, newobj: JObject, db: DBBase, opts: UpdateOption*): JObject = {
+		// these updates return the modifier object, not the object that was updated.
+		JObjectParser.serialize(update(
+			JObjectParser.parse(qry),
+			JObjectParser.parse(newobj),
+			db,
+			opts :_*
+		)).asInstanceOf[JObject]
+	}
+
+	/*
+	* Update document with a JObject query. For use with modifier operations $inc, $set, $push...
+	*/
+	def update(qry: JObject, newobj: JObject, opts: UpdateOption*): JObject = {
+		MongoDB.use(mongoIdentifier) ( db => {
+			update(qry, newobj, db, opts :_*)
+		})
+	}
+	
+	/*
+	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
+	*/
+	def update(qry: Map[String, Any], newobj: Map[String, Any], db: DBBase, opts: UpdateOption*): DBObject = {
+		// these updates return the modifier object, not the object that was updated.
+		update(
+			MapParser.parse(qry),
+			MapParser.parse(newobj),
+			db,
+			opts :_*
+		)
+	}
+	
+	/*
+	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
+	*/
+	def update(qry: Map[String, Any], newobj: Map[String, Any], opts: UpdateOption*): DBObject = {
+		MongoDB.use(mongoIdentifier) ( db => {
+			update(qry, newobj, db, opts :_*)
 		})
 	}
 }
@@ -366,21 +536,32 @@ trait JsonObject[BaseDocument] {
 	def meta: JsonObjectMeta[BaseDocument]
 
 	// convert class to a json value
-	def asJObject: JObject = meta.toJObject(this)
+	def asJObject()(implicit formats: Formats): JObject = meta.toJObject(this)
 
 }
 
 class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 
 	import net.liftweb.json.Extraction._
-
-	private val formats = DefaultFormats
+	
+	/* override this for custom Formats (date)
+  def joformats: Formats = DefaultFormats //.lossless
+	private lazy val _joformats: Formats = joformats
+	*/
 
 	// create an instance of BaseDocument from a JObject
-	def create(in: JObject): BaseDocument = {
+	def create(in: JObject)(implicit formats: Formats): BaseDocument =
 		extract(in)(formats, mf)
-	}
 
 	// convert class to a json object
-	def toJObject(in: BaseDocument): JObject = serialize(in)(formats).asInstanceOf[JObject]
+	def toJObject(in: BaseDocument)(implicit formats: Formats): JObject =
+		decompose(in)(formats).asInstanceOf[JObject]
 }
+
+/*
+* Case class for a db reference (foreign key).
+* ref = collection name, id is the value of the reference
+*/
+case class DBRef(ref: String, id: String) /*extends JsonObject[DBRef]
+object DBRef extends JsonObjectMeta*/
+

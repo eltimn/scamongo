@@ -27,7 +27,7 @@ import net.liftweb.json.JsonAST._
 import net.liftweb.json.JsonParser._
 import net.liftweb.json.JsonDSL._
 
-import com.mongodb.ObjectId
+import com.mongodb.{BasicDBList, BasicDBObject, ObjectId}
 
 //class JsonExampleTest extends Runner(JsonExamples) with JUnit
 object JsonExamples extends Specification {
@@ -41,8 +41,6 @@ object JsonExamples extends Specification {
 	import com.mongodb.util.JSON // Mongo parser/serializer
 
 	val debug = false
-
-	def date(s: String) = MongoFormats.dateFormat.parse(s).get
 
 	"Simple Person example" in {
 
@@ -145,6 +143,8 @@ object JsonExamples extends Specification {
   }
 
   "Person example" in {
+  
+  	def date(s: String) = Person.formats.dateFormat.parse(s).get
 
 		// create a new Person
 		val p = Person(MongoHelpers.newUUID, "joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
@@ -200,7 +200,7 @@ object JsonExamples extends Specification {
 		tcFromDb.isDefined must_== true
 		tcFromDb.get must_== tc3
 		
-		// Upset - this should add a new row
+		// Upsert - this should add a new row
 		val tc4 = TestCollection(MongoHelpers.newMongoId, "nothing", "document", 1, info)
 		TestCollection.update(("name" -> "nothing"), tc4, Upsert)
 		TestCollection.findAll.length must_== 3
@@ -342,15 +342,11 @@ object JsonExamples extends Specification {
 			db.getLastError.get("n") must_== 0
 
 			// regex query example
-			val key = "name"
-			val regex = "^Mongo"
-			val dbo = MongoHelpers.dbObjectBuilder.add(key, Pattern.compile(regex)).get
-			val lst = TestCollection.findAll(dbo)
+			val lst = TestCollection.findAll(Map("name" -> Pattern.compile("^Mongo")))
 			lst.size must_== 2
 
 			// use regex and another clause
-			val dbo2 = MongoHelpers.dbObjectBuilder.add(key, Pattern.compile(regex)).add("count", 1).get
-			val lst2 = TestCollection.findAll(dbo2)
+			val lst2 = TestCollection.findAll(Map("name" -> Pattern.compile("^Mongo"), "count" -> 1))
 			lst2.size must_== 1
 
 			if (!debug) {
@@ -364,6 +360,8 @@ object JsonExamples extends Specification {
   }
   
   "Primitives example" in {
+  
+  	def date(s: String) = Primitive.formats.dateFormat.parse(s).get
   	
   	val p = Primitive(MongoHelpers.newMongoId, 2147483647, 2147483648L, 1797693, 3.4028235F, 1000, 0, true, 512, date("2004-09-04T18:06:22Z"))
 
@@ -383,7 +381,59 @@ object JsonExamples extends Specification {
 
 			pFromDb.isEmpty must_== true
 		}
-	}	
+	}
+	
+	"Ref example" in {
+
+  	val ref1 = RefJDoc(MongoHelpers.newMongoId)
+  	val ref2 = RefJDoc(MongoHelpers.newMongoId)
+
+  	ref1.save must_== ref1
+  	ref2.save must_== ref2
+
+  	val md1 = MainJDoc(MongoHelpers.newMongoId, "md1", ref1.getRef)
+  	val md2 = MainJDoc(MongoHelpers.newMongoId, "md2", ref1.getRef)
+  	val md3 = MainJDoc(MongoHelpers.newMongoId, "md3", ref2.getRef)
+  	val md4 = MainJDoc(MongoHelpers.newMongoId, "md4", ref2.getRef)
+
+  	md1.save must_== md1
+  	md2.save must_== md2
+  	md3.save must_== md3
+  	md4.save must_== md4
+
+  	MainJDoc.count must_== 4
+  	RefJDoc.count must_== 2
+
+		// query for a single doc with a JObject query
+		val md1a = MainJDoc.find(("name") -> "md1")
+		md1a.isDefined must_== true
+		md1a.foreach(o => o._id must_== md1._id)
+
+		// query for a single doc with a k, v query
+		val md1b = MainJDoc.find("_id", md1._id)
+		md1b.isDefined must_== true
+		md1b.foreach(o => o._id must_== md1._id)
+
+		// find all documents
+		MainJDoc.findAll.size must_== 4
+		RefJDoc.findAll.size must_== 2
+
+		// find all documents with JObject query
+		val mdq1 = MainJDoc.findAll(("name" -> "md1"))
+		mdq1.size must_== 1
+
+		// find all documents with $in query, sorted
+		val qry = ("name" -> ("$in" -> List("md1", "md2")))
+		val mdq2 = MainJDoc.findAll(qry, ("name" -> -1))
+		mdq2.size must_== 2
+		mdq2.first._id must_== md2._id
+
+		// Find all documents using a k, v query
+		val mdq3 = MainJDoc.findAll("_id", md1._id)
+		mdq3.size must_== 1
+
+
+  }
 
   doLast {
   	if (!debug) {
@@ -393,6 +443,19 @@ object JsonExamples extends Specification {
 			TestCollection.drop
 			IDoc.drop
 			Primitive.drop
+			MainJDoc.drop
+  		RefJDoc.drop
+  		
+  		// drop the databases
+  		MongoDB.useAdmin {
+  			dba => dba.dropDatabase()
+  		}
+  		MongoDB.useAdmin(TestDBa) {
+  			dba => dba.dropDatabase()
+  		}
+  		MongoDB.useAdmin(TestDBb) {
+  			dba => dba.dropDatabase()
+  		}
 		}
 
 		// clear the mongo instances
@@ -446,7 +509,8 @@ case class TestCollection(_id: String, name: String, dbtype: String, count: Int,
 object TestCollection extends MongoDocumentMeta[TestCollection] {
 
 	// create a unique index on name
-	ensureIndex(("name" -> 1), Unique)
+	//ensureIndex(("name" -> 1), Unique)
+	ensureIndex(Map("name" -> 1), Unique)
 
 }
 
@@ -481,3 +545,18 @@ case class Primitive(
 }
 
 object Primitive extends MongoDocumentMeta[Primitive]
+
+case class MainJDoc(_id: String, name: String, refdoc: DBRef) extends MongoDocument[MainJDoc] {
+
+	def meta = MainJDoc
+}
+
+object MainJDoc extends MongoDocumentMeta[MainJDoc]
+
+case class RefJDoc(_id: String) extends MongoDocument[RefJDoc] {
+	def meta = RefJDoc
+}
+
+object RefJDoc extends MongoDocumentMeta[RefJDoc]
+
+

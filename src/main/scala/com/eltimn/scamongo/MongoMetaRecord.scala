@@ -19,8 +19,10 @@ package com.eltimn.scamongo
 import java.util.Calendar
 import java.util.regex.Pattern
 
+import scala.collection.jcl.Conversions._
 import scala.collection.mutable.ListBuffer
 
+import net.liftweb.json.Formats
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.record.{MetaRecord, Record}
 import net.liftweb.record.field._
@@ -101,17 +103,32 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 
 		find(qry)
 	}*/
-	
+
 	/**
 	* Find a single row by an ObjectId
 	*/
 	def find(oid: ObjectId): Box[BaseRecord] = find(new BasicDBObject("_id", oid))
 	
 	/**
+	* Find a single row by a String id
+	*/
+	def find(id: String): Box[BaseRecord] = find(new BasicDBObject("_id", id))
+	
+	/**
+	* Find a single row by a Int id
+	*/
+	def find(id: Int): Box[BaseRecord] = find(new BasicDBObject("_id", id))
+
+	/**
 	* Find a single document by a qry using a json value
 	*/
 	def find(json: JObject): Box[BaseRecord] = find(JObjectParser.parse(json))
-	
+
+	/**
+	* Find a single document by a qry using a Map
+	*/
+	def find(map: Map[String, Any]): Box[BaseRecord] = find(MapParser.parse(map))
+
 	/**
 	* Find a single row by a qry using String key and Any value
 	*/
@@ -121,7 +138,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	* Find all rows in this collection
 	*/
 	def findAll: List[BaseRecord] = {
-		var ret = new ListBuffer[BaseRecord]
+		val ret = new ListBuffer[BaseRecord]
 
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
 			val cur = coll.find
@@ -138,10 +155,10 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/**
 	* Find all rows using a DBObject query. Internal use only.
 	*/
-	private def findAll(qry: DBObject, sort: Option[JObject], opts: FindOption*): List[BaseRecord] = {
-		var ret = new ListBuffer[BaseRecord]
+	private def findAll(qry: DBObject, sort: Option[DBObject], opts: FindOption*): List[BaseRecord] = {
+		val ret = new ListBuffer[BaseRecord]
 		val cur = getCursor(qry, sort, opts :_*)
-		
+
 		while (cur.hasNext) {
 			createRecord(cur.next) match {
 				case Full(obj) => ret += obj
@@ -150,7 +167,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		}
 		ret.toList
 	}
-	
+
 	/**
 	* Find all documents using a DBObject query. These are for passing in regex queries.
 	*/
@@ -158,9 +175,9 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		findAll(qry, None, opts :_*)
 
 	/**
-	* Find all documents using a JObject query with sort
+	* Find all documents using a DBObject query with sort
 	*/
-	def findAll(qry: DBObject, sort: JObject, opts: FindOption*): List[BaseRecord] =
+	def findAll(qry: DBObject, sort: DBObject, opts: FindOption*): List[BaseRecord] =
 		findAll(qry, Some(sort), opts :_*)
 
 	/**
@@ -174,17 +191,38 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	* Find all documents using a JObject query with sort
 	*/
 	def findAll(qry: JObject, sort: JObject, opts: FindOption*): List[BaseRecord] =
-		findAll(JObjectParser.parse(qry), Some(sort), opts :_*)
+		findAll(JObjectParser.parse(qry), Some(JObjectParser.parse(sort)), opts :_*)
+
+	/**
+	* Find all documents using a Map query
+	*/
+	def findAll(qry: Map[String, Any], opts: FindOption*): List[BaseRecord] = {
+		findAll(MapParser.parse(qry), None, opts :_*)
+	}
+
+	/**
+	* Find all documents using a Map query with sort
+	*/
+	def findAll(qry: Map[String, Any], sort: Map[String, Any], opts: FindOption*): List[BaseRecord] =
+		findAll(MapParser.parse(qry), Some(MapParser.parse(sort)), opts :_*)
 
 	/**
 	* Find all documents using a k, v query
 	*/
-	def findAll(k: String, o: Any, opts: FindOption*): List[BaseRecord] = findAll(new BasicDBObject(k, o), None, opts :_*)
+	def findAll(k: String, o: Any, opts: FindOption*): List[BaseRecord] =
+		findAll(new BasicDBObject(k, o), None, opts :_*)
 
 	/**
-	* Find all documents using a k, v query with sort
+	* Find all documents using a k, v query with JOBject sort
 	*/
-	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseRecord] = findAll(new BasicDBObject(k, o), Some(sort), opts :_*)
+	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseRecord] =
+		findAll(new BasicDBObject(k, o), Some(JObjectParser.parse(sort)), opts :_*)
+
+	/**
+	* Find all documents using a k, v query with Map sort
+	*/
+	def findAll(k: String, o: Any, sort: Map[String, Any], opts: FindOption*): List[BaseRecord] =
+		findAll(new BasicDBObject(k, o), Some(MapParser.parse(sort)), opts :_*)
 
 	/**
 	* Save the instance in the appropriate backing store
@@ -228,6 +266,39 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	*/
 	def saved_?(inst: BaseRecord): Boolean = true
 
+	/*
+	* Update document with a JObject query using the given Mongo instance
+	*/
+	def update(qry: JObject, newbr: BaseRecord, db: DBBase, opts: UpdateOption*): BaseRecord = {
+		createRecord(update(JObjectParser.parse(qry), toDBObject(newbr), db, opts :_*)) openOr createRecord
+	}
+
+	/*
+	* Update document with a JObject query
+	*/
+	def update(qry: JObject, newbr: BaseRecord, opts: UpdateOption*): BaseRecord = {
+		MongoDB.use(mongoIdentifier) ( db => {
+			update(qry, newbr, db, opts :_*)
+		})
+	}
+
+	/*
+	* Update document with a Map query using the given Mongo instance
+	*/
+	def update(qry: Map[String, Any], newbr: BaseRecord, db: DBBase, opts: UpdateOption*): BaseRecord = {
+		createRecord(update(MapParser.parse(qry), toDBObject(newbr), db, opts :_*)) openOr createRecord
+	}
+
+	/*
+	* Update document with a Map query
+	*/
+	def update(qry: Map[String, Any], newbr: BaseRecord, opts: UpdateOption*): BaseRecord = {
+		MongoDB.use(mongoIdentifier) ( db => {
+			update(qry, newbr, db, opts :_*)
+		})
+	}
+
+
 	/**
 	* Populate the inst's fields with the values from a DBObject. Values are set
 	* using setFromAny passing it the DBObject returned from Mongo.
@@ -243,8 +314,8 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 			case 0 => Empty
 			case _ => {
 				for (k <- keys.toArray) {
-					// mongo-java-driver returns json objects as string instead of DBObjects
-					inst.fieldByName(k.toString).map(field => 
+					// mongo-java-driver returns json objects as string instead of DBObjects (??)
+					inst.fieldByName(k.toString).map(field =>
 						field.setFromAny(obj.get(k.toString))
 					)
 				}
@@ -262,7 +333,9 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	*/
 	private def toDBObject(inst: BaseRecord): DBObject = {
 
-		val dbo = new BasicDBObject
+		import Meta.Reflection._
+
+		val dbo = BasicDBObjectBuilder.start // use this so regex patterns can be stored.
 
 		for (f <- fields) {
 			fieldByName(f.name, inst) match {
@@ -270,30 +343,20 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 				case Full(field) if field.isInstanceOf[CountryField[Any]] =>
 					dbo.put(f.name, field.asInstanceOf[CountryField[Any]].value)
 				*/
-				case Full(field) => field.value match {
-					case b: Boolean => dbo.put(f.name, b)
-					case c: Calendar => dbo.put(f.name, MongoFormats.dateFormat.format(c.getTime))
-					case d: Double => dbo.put(f.name, d)
-					case n: Int => dbo.put(f.name, n)
-					case l: Long => dbo.put(f.name, l)
-					case s: String => dbo.put(f.name, s)
-					case o: ObjectId => dbo.put(f.name, o)
-					case DBRef(c, i) => {
-						val ref = new BasicDBObject("ref", c).append("id", i)
-						dbo.put(f.name, ref)
-					}
-					case jv: JObject => dbo.put(f.name, JObjectParser.parse(jv))
-					case _ => dbo.put(f.name, field.toString)
+				case Full(field: MongoFieldFlavor[Any]) =>
+					dbo.add(f.name, field.asInstanceOf[MongoFieldFlavor[Any]].asDBObject)
+				case Full(field) if field.value.isInstanceOf[Calendar] =>
+					dbo.add(f.name, formats.dateFormat.format(field.value.asInstanceOf[Calendar].getTime))
+				case Full(field) => field.value.asInstanceOf[AnyRef] match {
+					case x if primitive_?(x.getClass) => dbo.add(f.name, x)
+					case x if datetype_?(x.getClass) => dbo.add(f.name, datetype2dbovalue(x)(formats))
+					case x if mongotype_?(x.getClass) => dbo.add(f.name, mongotype2dbovalue(x))
+					case o => dbo.add(f.name, o.toString)
 				}
-
-				/*case Full(field) if field.isInstanceOf[MongoFieldFlavor[Any]] =>
-					obj.put(f.name, field.asInstanceOf[MongoFieldFlavor[Any]].toDBObject)
-				*/
-
-				case _ => dbo.markAsPartialObject // so we know it's only partial
+				case _ => //dbo.markAsPartialObject // so we know it's only partial
 			}
 		}
-		dbo
+		dbo.get
 	}
 
 }

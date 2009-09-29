@@ -116,8 +116,3 @@ trait MongoId[OwnerType <: MongoRecord[OwnerType]] {
   //def getDbRef = new DBRefBase(owner.meta.getDb, owner.meta.collectionName, value)
   //def getRef = MongoDbRef(this.asInstanceOf[OwnerType].owner.meta.getDb.toString, owner.meta.collectionName, this.asInstanceOf[OwnerType].value)
 }
-
-/*
-* Need a way to map collectionName to Record class
-*/
-case class DBRef(ref: String, id: String)

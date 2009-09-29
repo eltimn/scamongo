@@ -16,8 +16,12 @@ package com.eltimn.scamongo
  * and limitations under the License.
  */
 
-import java.util.Date
+import java.util.{Calendar, Date}
+import java.util.regex.Pattern
 
+import scala.collection.mutable.ListBuffer
+
+import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonDSL._
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.record.field._
@@ -26,7 +30,7 @@ import net.liftweb.util.{Box, Full}
 import org.specs.Specification
 import org.specs.runner.{Runner, JUnit}
 
-import com.mongodb.{BasicDBObject, BasicDBList, ObjectId}
+import com.mongodb._
 import com.mongodb.util.JSON
 
 import field._
@@ -43,6 +47,9 @@ object RecordExamples extends Specification {
 	}
 
 	"TestRecord example" in {
+
+		implicit val formats = TestRecord.formats
+
     val tr = TestRecord.createRecord
     tr.stringfield.set("test record string field")
     tr.emailfield.set("test")
@@ -69,8 +76,8 @@ object RecordExamples extends Specification {
 		for (t <- fromDb) {
 			t._id.value must_== tr._id.value
 			t.booleanfield.value must_== tr.booleanfield.value
-			MongoFormats.dateFormat.format(t.datetimefield.value.getTime) must_==
-			MongoFormats.dateFormat.format(tr.datetimefield.value.getTime)
+			TestRecord.formats.dateFormat.format(t.datetimefield.value.getTime) must_==
+			TestRecord.formats.dateFormat.format(tr.datetimefield.value.getTime)
 			t.doublefield.value must_== tr.doublefield.value
 			t.intfield.value must_== tr.intfield.value
 			t.localefield.value must_== tr.localefield.value
@@ -86,8 +93,8 @@ object RecordExamples extends Specification {
 			for (i <- List.range(0, p.children.size-1)) {
 				p.children(i).name must_== per.children(i).name
 				p.children(i).age must_== per.children(i).age
-				MongoFormats.dateFormat.format(p.children(i).birthdate.get) must_==
-				MongoFormats.dateFormat.format(per.children(i).birthdate.get)
+				TestRecord.formats.dateFormat.format(p.children(i).birthdate.get) must_==
+				TestRecord.formats.dateFormat.format(per.children(i).birthdate.get)
 			}
 		}
   }
@@ -138,6 +145,11 @@ object RecordExamples extends Specification {
 		md1b.isDefined must_== true
 		md1b.foreach(o => o.id must_== md1.id)
 
+		// query for a single doc with a Map query
+		val md1c = MainDoc.find(Map("name"-> "md1"))
+		md1c.isDefined must_== true
+		md1c.foreach(o => o.id must_== md1.id)
+
 		// find all documents
 		MainDoc.findAll.size must_== 4
 		RefDoc.findAll.size must_== 2
@@ -147,11 +159,8 @@ object RecordExamples extends Specification {
 		mdq1.size must_== 1
 
 		// find all documents with $in query, sorted
-		val names = new BasicDBList
-		names.add("md1")
-		names.add("md2")
-		val qry = new BasicDBObject("name", new BasicDBObject("$in", names))
-		val mdq2 = MainDoc.findAll(qry, ("name" -> -1))
+		val qry = Map("name" -> Map("$in" -> List("md1", "md2")))
+		val mdq2 = MainDoc.findAll(qry, Map("name" -> -1))
 		mdq2.size must_== 2
 		mdq2.first.id must_== md2.id
 
@@ -159,8 +168,98 @@ object RecordExamples extends Specification {
 		val mdq3 = MainDoc.findAll("_id", md1.id)
 		mdq3.size must_== 1
 
+		// Upsert - this should add a new row
+		val md5 = MainDoc.createRecord
+		md5.name.set("md5")
+		md5.refdoc.set(ref1.getRef)
+		MainDoc.update(("name" -> "nothing"), md5, Upsert)
+		MainDoc.findAll.size must_== 5
 
+		// modifier operations $inc, $set, $push...
+		val o2 = (("$inc" -> ("cnt" -> 1)) ~ ("$set" -> ("name" -> "md1a")))
+		MainDoc.update(("name" -> "md1"), o2) must_== o2 // these updates return the o2 object that was passed in
+
+		// get the doc back from the db and compare
+		val mdq5 = MainDoc.find("_id", md1.id)
+		mdq5.isDefined must_== true
+		mdq5.map ( m =>
+			m.name.value must_== "md1a"
+		)
+
+		// Upsert with Map query - this should add a new row
+		val md6 = MainDoc.createRecord
+		md6.name.set("md6")
+		md6.refdoc.set(ref1.getRef)
+		MainDoc.update(Map("name" -> "nothing"), md6, Upsert)
+		MainDoc.findAll.size must_== 6
+
+		if (!debug) {
+			// delete them
+			md1.delete_!
+			md2.delete_!
+			md3.delete_!
+			md4.delete_!
+			md5.delete_!
+			md6.delete_!
+			ref1.delete_!
+			ref2.delete_!
+
+			MainDoc.findAll.size must_== 0
+		}
   }
+
+  "List example" in {
+
+  	val ref1 = RefDoc.createRecord
+  	val ref2 = RefDoc.createRecord
+
+  	ref1.save must_== ref1
+  	ref2.save must_== ref2
+
+  	val name = "ld1"
+  	val strlist = List("string1", "string2", "string3")
+
+		val ld1 = ListDoc.createRecord
+		ld1.name.set(name)
+		ld1.stringlist.set(strlist)
+		ld1.intlist.set(List(99988,88))
+		ld1.doublelist.set(List(997655.998,88.8))
+		ld1.boollist.set(List(true,true,false))
+		ld1.objidlist.set(List(ObjectId.get, ObjectId.get))
+		ld1.dbreflist.set(List(ref1.getRef, ref2.getRef))
+		ld1.jobjlist.set(List((("name" -> "jobj1") ~ ("type" -> "jobj")), (("name" -> "jobj2") ~ ("type" -> "jobj"))))
+		ld1.jsonobjlist.set(List(JsonDoc("1", "jsondoc1"), JsonDoc("2", "jsondoc2")))
+		ld1.datelist.set(List(now, now))
+		/*val cal = Calendar.getInstance()
+    cal.setTime(now)
+		ld1.calendarlist.set(List(cal, cal))*/
+		ld1.patternlist.set(List(Pattern.compile("^Mongo"), Pattern.compile("^Mongo2")))
+		ld1.maplist.set(List(Map("name" -> "map1", "type" -> "map"), Map("name" -> "map2", "type" -> "map")))
+
+		//lda..set(List())
+		ld1.save must_== ld1
+
+		val qld1 = ListDoc.find(ld1.id)
+
+		qld1.isDefined must_== true
+
+		qld1.foreach { l =>
+			l.name.value must_== ld1.name.value
+			l.stringlist.value must_== ld1.stringlist.value
+			l.intlist.value must_== ld1.intlist.value
+			l.doublelist.value must_== ld1.doublelist.value
+			l.boollist.value must_== ld1.boollist.value
+			l.objidlist.value must_== ld1.objidlist.value
+			l.dbreflist.value must_== ld1.dbreflist.value
+			l.jobjlist.value must_== ld1.jobjlist.value
+			l.jsonobjlist.value must_== ld1.jsonobjlist.value
+			l.datelist.value must_== ld1.datelist.value
+			l.maplist.value must_== ld1.maplist.value
+			l.jsonobjlist.value(0).id must_== "1"
+		}
+
+	}
+
 
   doLast {
   	if (!debug) {
@@ -168,6 +267,12 @@ object RecordExamples extends Specification {
 			TestRecord.drop
 			MainDoc.drop
   		RefDoc.drop
+  		ListDoc.drop
+  		
+  		// drop the database
+  		MongoDB.useAdmin {
+  			dba => dba.dropDatabase()
+  		}
   	}
 
   	// clear the mongo instances
@@ -245,14 +350,14 @@ class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
 
 	def meta = MainDoc
 
-	//import field._
 	//object _id extends MongoIdField(this)
 	object name extends StringField(this, 12)
+	object cnt extends IntField(this)
 
 	object refdoc extends MongoRefField(this) {
 
 		def fetch = {
-			RefDoc.find(new ObjectId(value.id))
+			RefDoc.find(value.id)
 		}
 	}
 }
@@ -265,6 +370,64 @@ object MainDoc extends MainDoc with MongoMetaRecord[MainDoc] {
 class RefDoc extends MongoRecord[RefDoc] with MongoId[RefDoc] {
 	def meta = RefDoc
 }
-
 object RefDoc extends RefDoc with MongoMetaRecord[RefDoc]
 
+class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
+	def meta = ListDoc
+	
+	import scala.collection.jcl.Conversions._
+
+	// standard list types
+	object name extends StringField(this, 10)
+	object stringlist extends MongoListField[ListDoc, String](this)
+	object intlist extends MongoListField[ListDoc, Int](this)
+	object doublelist extends MongoListField[ListDoc, Double](this)
+	object boollist extends MongoListField[ListDoc, Boolean](this)
+	object objidlist extends MongoListField[ListDoc, ObjectId](this)
+	object dbreflist extends MongoListField[ListDoc, DBRef](this)
+	object calendarlist extends MongoListField[ListDoc, Calendar](this)
+	object patternlist extends MongoListField[ListDoc, Pattern](this)
+	object maplist extends MongoListField[ListDoc, Map[String, Any]](this) {
+		override def setFromDBObject(dbo: DBObject): Box[List[Map[String, Any]]] = {
+			val lst: List[Map[String, Any]] =
+				dbo.keySet.map(k => {
+					dbo.get(k.toString) match {
+						case bdbo: BasicDBObject if (bdbo.containsField("name") && bdbo.containsField("type") && bdbo.keySet.size == 2) =>
+							Map("name"-> bdbo.get("name"), "type" -> bdbo.get("type"))
+						case _ => null
+					}
+				}).toList.filter(_ != null)
+			Full(set(lst))
+		}
+	}
+
+	// specialized list types
+	object jobjlist extends MongoJObjectListField(this)
+	object datelist	extends MongoDateListField(this)
+
+	// these require custom setFromDBObject methods
+	//object jsonobjlist extends MongoJsonObjectListField[ListDoc, JsonDoc](this, JsonDoc)
+	object jsonobjlist extends MongoListField[ListDoc, JsonDoc](this) {
+		override def setFromDBObject(dbo: DBObject): Box[List[JsonDoc]] = {
+			implicit val formats = meta.formats
+			val lst: List[JsonDoc] =
+				dbo.keySet.map(k => {
+					JsonDoc.create(JObjectParser.serialize(dbo.get(k.toString)).asInstanceOf[JObject])
+				}).toList
+			Full(set(lst))
+		}
+	}
+}
+object ListDoc extends ListDoc with MongoMetaRecord[ListDoc] {
+	override def formats = DefaultFormats.lossless // adds .000
+}
+
+case class JsonDoc(id: String, name: String) extends JsonObject[JsonDoc] {
+	def meta = JsonDoc
+}
+object JsonDoc extends JsonObjectMeta[JsonDoc]
+
+object CustomFormats extends DefaultFormats {
+	import java.text.SimpleDateFormat
+	override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+}

@@ -26,7 +26,7 @@ import net.liftweb.json.JsonAST._
 
 import com.mongodb.{BasicDBObject, BasicDBList, DBObject}
 
-private[scamongo] object JObjectParser {
+object JObjectParser {
 
 	/*
 	* Parse a JObject into a DBObject
@@ -41,9 +41,10 @@ private[scamongo] object JObjectParser {
 	def serialize(a: Any)(implicit formats: Formats): JValue = serialize(a, formats)
 
   private def serialize(a: Any, formats: Formats): JValue = {
-  	import Reflection._
+  	import Meta.Reflection._
 		a.asInstanceOf[AnyRef] match {
-			case x if primitive_?(x.getClass) => primitive2jvalue(x)(formats)
+			case x if primitive_?(x.getClass) => primitive2jvalue(x)
+			case x if datetype_?(x.getClass) => datetype2jvalue(x)(formats)
 			case x: java.util.ArrayList[_] => JArray(x.toList.map( x => serialize(x, formats)))
 			case x: Option[_] => serialize(x getOrElse JNothing, formats)
 			case x: DBObject =>
@@ -101,7 +102,7 @@ private[scamongo] object JObjectParser {
 		  case JString(s) => s
 		  case _ => "match error (renderValue): "+jv.getClass
 		}
-		
+
 		private def renderInteger(i: BigInt): Object = {
 			if (i <= java.lang.Integer.MAX_VALUE && i >= java.lang.Integer.MIN_VALUE) {
 				new java.lang.Integer(i.intValue)
@@ -118,40 +119,5 @@ private[scamongo] object JObjectParser {
 		private def trimObj(xs: List[JField]) = xs.filter(_.value != JNothing)
   }
 
-  object Reflection {
-    import java.lang.reflect._
 
-    val primitives = Set[Class[_]](classOf[String],/* classOf[Int], classOf[Long], classOf[Double],
-                                   classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean],
-                                   classOf[Short],*/ classOf[java.lang.Integer], classOf[java.lang.Long],
-                                   classOf[java.lang.Double], classOf[java.lang.Float],
-                                   classOf[java.lang.Byte], classOf[java.lang.Boolean],
-                                   classOf[java.lang.Short], classOf[Date])
-
-    def primitive_?(clazz: Class[_]) = primitives contains clazz
-
-    def primitive2jvalue(a: Any)(implicit formats: Formats) = a match {
-    /* 
-      
-      case x: Int => JInt(x)
-      case x: Long => JInt(x)
-      case x: Double => JDouble(x)
-      case x: Float => JDouble(x)
-      case x: Byte => JInt(BigInt(x))
-      case x: BigInt => JInt(x)
-      case x: Boolean => JBool(x)
-      case x: Short => JInt(BigInt(x))
-   */
-    	case x: String => JString(x)
-      case x: java.lang.Integer => JInt(BigInt(x.asInstanceOf[Int]))
-      case x: java.lang.Long => JInt(BigInt(x.asInstanceOf[Long]))
-      case x: java.lang.Double => JDouble(x.asInstanceOf[Double])
-      case x: java.lang.Float => JDouble(x.asInstanceOf[Float])
-      case x: java.lang.Byte => JInt(BigInt(x.asInstanceOf[Byte]))
-      case x: java.lang.Boolean => JBool(x.asInstanceOf[Boolean])
-      case x: java.lang.Short => JInt(BigInt(x.asInstanceOf[Short]))
-      case x: Date => JString(formats.dateFormat.format(x))
-      case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
-    }
-  }
 }
