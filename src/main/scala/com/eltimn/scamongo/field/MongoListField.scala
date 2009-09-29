@@ -105,7 +105,7 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 				}
 				*/
 				case dbo: BasicDBObject if (dbo.containsField("ref") && dbo.containsField("id") && dbo.keySet.size == 2) =>
-					ret += DBRef(dbo.get("ref").toString, dbo.get("id").toString).asInstanceOf[ListType]
+					ret += MongoRef(dbo.get("ref").toString, dbo.get("id").toString).asInstanceOf[ListType]
 				case o => {
 					ret += o.asInstanceOf[ListType]
 				}

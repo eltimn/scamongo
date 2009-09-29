@@ -38,7 +38,7 @@ trait MongoDocument[BaseDocument] extends JsonObject[BaseDocument] {
 
 	def save:BaseDocument = meta.save(this)
 	
-	def getRef: DBRef = DBRef(meta.collectionName, _id.toString)
+	def getRef: MongoRef = MongoRef(meta.collectionName, _id.toString)
 }
 
 /*

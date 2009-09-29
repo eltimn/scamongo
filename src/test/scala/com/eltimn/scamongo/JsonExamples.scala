@@ -546,7 +546,7 @@ case class Primitive(
 
 object Primitive extends MongoDocumentMeta[Primitive]
 
-case class MainJDoc(_id: String, name: String, refdoc: DBRef) extends MongoDocument[MainJDoc] {
+case class MainJDoc(_id: String, name: String, refdoc: MongoRef) extends MongoDocument[MainJDoc] {
 
 	def meta = MainJDoc
 }

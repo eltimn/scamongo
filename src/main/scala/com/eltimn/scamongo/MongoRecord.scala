@@ -111,7 +111,7 @@ trait MongoId[OwnerType <: MongoRecord[OwnerType]] {
   def id = _id.value
   
   //def getRefBase: DBRefBase = _id.getRefBase
-  def getRef: DBRef = _id.getRef
+  def getRef: MongoRef = _id.getRef
 
   //def getDbRef = new DBRefBase(owner.meta.getDb, owner.meta.collectionName, value)
   //def getRef = MongoDbRef(this.asInstanceOf[OwnerType].owner.meta.getDb.toString, owner.meta.collectionName, this.asInstanceOf[OwnerType].value)

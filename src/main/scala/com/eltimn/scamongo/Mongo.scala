@@ -562,7 +562,7 @@ class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 * Case class for a db reference (foreign key).
 * ref = collection name, id is the value of the reference
 */
-case class DBRef(ref: String, id: String) {
+case class MongoRef(ref: String, id: String) {
 	def objectId = new ObjectId(id)
 }
 /*extends JsonObject[DBRef]

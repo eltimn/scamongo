@@ -38,6 +38,6 @@ class MongoStringIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 		}
 	}
 
-	def getRef: DBRef =
-		DBRef(owner.meta.collectionName, value)
+	def getRef: MongoRef =
+		MongoRef(owner.meta.collectionName, value)
 }

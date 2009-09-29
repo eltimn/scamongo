@@ -28,7 +28,7 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject, DBRefBase}
 //class MongoRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoRecord[RefType]](rec: OwnerType, refMeta: RefType) extends Field[DBRef, OwnerType] {
 //class MongoRefField[OwnerType <: MongoRecord[OwnerType], MongoMetaRecord](rec: OwnerType, refMeta: MongoMetaRecord) extends Field[DBRef, OwnerType] {
 class MongoRefField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
-	extends Field[DBRef, OwnerType] with MongoFieldFlavor[DBRef] {
+	extends Field[MongoRef, OwnerType] with MongoFieldFlavor[MongoRef] {
 
 	def asJs = Str(toString)
 
@@ -36,10 +36,10 @@ class MongoRefField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 
 	def defaultValue = null
 
-	def setFromAny(in: Any): Box[DBRef] = in match {
-  	case ref: DBRef => Full(set(ref))
-  	case Some(ref: DBRef) => Full(set(ref))
-    case Full(ref: DBRef) => Full(set(ref))
+	def setFromAny(in: Any): Box[MongoRef] = in match {
+  	case ref: MongoRef => Full(set(ref))
+  	case Some(ref: MongoRef) => Full(set(ref))
+    case Full(ref: MongoRef) => Full(set(ref))
     case dbo: DBObject => setFromDBObject(dbo)
     case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
     case (s: String) :: _ => setFromString(s)
@@ -74,9 +74,9 @@ class MongoRefField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
   }
 
 	// set this field's value using a DBObject returned from Mongo.
-	def setFromDBObject(dbo: DBObject): Box[DBRef] = {
+	def setFromDBObject(dbo: DBObject): Box[MongoRef] = {
   	(dbo.containsField("ref"), dbo.containsField("id")) match {
-  		case (true, true) => Full(set(DBRef(dbo.get("ref").toString, dbo.get("id").toString)))
+  		case (true, true) => Full(set(MongoRef(dbo.get("ref").toString, dbo.get("id").toString)))
   		case _ => Empty //Full(set(null))
   	}
   }

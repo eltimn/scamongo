@@ -147,13 +147,13 @@ private[scamongo] object Meta {
 		}
 
     val mongotypes = Set[Class[_]](
-    	classOf[DBRef], classOf[JObject], //classOf[JsonObject[Any]],
+    	classOf[MongoRef], classOf[JObject], //classOf[JsonObject[Any]],
     	classOf[ObjectId], classOf[Pattern], classOf[Map[String, Any]])
 
     def mongotype_?(clazz: Class[_]) = mongotypes contains clazz
 
     def mongotype2dbovalue(a: Any)(implicit formats: Formats) = a match {
-    	case DBRef(r, i) => new BasicDBObject("ref", r).append("id", i)
+    	case MongoRef(r, i) => new BasicDBObject("ref", r).append("id", i)
     	case jo: JObject => JObjectParser.parse(jo) // Any JObject
 			//case jo: JsonObject[Any] => JObjectParser.parse(jo.asJObject) // A case class that extends JsonObject
 			case m: Map[String, Any] => MapParser.parse(m)

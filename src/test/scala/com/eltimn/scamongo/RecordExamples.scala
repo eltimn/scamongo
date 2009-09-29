@@ -384,7 +384,7 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 	object doublelist extends MongoListField[ListDoc, Double](this)
 	object boollist extends MongoListField[ListDoc, Boolean](this)
 	object objidlist extends MongoListField[ListDoc, ObjectId](this)
-	object dbreflist extends MongoListField[ListDoc, DBRef](this)
+	object dbreflist extends MongoListField[ListDoc, MongoRef](this)
 	object calendarlist extends MongoListField[ListDoc, Calendar](this)
 	object patternlist extends MongoListField[ListDoc, Pattern](this)
 	object maplist extends MongoListField[ListDoc, Map[String, Any]](this) {
