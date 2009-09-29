@@ -357,7 +357,7 @@ class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
 	object refdoc extends MongoRefField(this) {
 
 		def fetch = {
-			RefDoc.find(value.id)
+			RefDoc.find(value.objectId)
 		}
 	}
 }

@@ -131,7 +131,7 @@ object MongoDB {
   /**
   * Executes function {@code f} with the mongo named {@code name}. Uses the default mongoIdentifier
   */
-  def use[T] (f: (DBBase) => T): T = {
+  def use[T](f: (DBBase) => T): T = {
 
   	val db = getMongo(DefaultMongoIdentifier) match {
 			case Some(mongo) => mongo
@@ -157,7 +157,7 @@ object MongoDB {
   /**
   * Executes function {@code f} with the default mongoIdentifier
   */
-  def useAdmin[T] (f: (MongoAdmin) => T): T = {
+  def useAdmin[T](f: (MongoAdmin) => T): T = {
 
   	val dba = getMongo(DefaultMongoIdentifier) match {
 			case Some(mongo) => new MongoAdmin(mongo.getAddress)
@@ -562,6 +562,9 @@ class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 * Case class for a db reference (foreign key).
 * ref = collection name, id is the value of the reference
 */
-case class DBRef(ref: String, id: String) /*extends JsonObject[DBRef]
+case class DBRef(ref: String, id: String) {
+	def objectId = new ObjectId(id)
+}
+/*extends JsonObject[DBRef]
 object DBRef extends JsonObjectMeta*/
 
