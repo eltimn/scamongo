@@ -42,8 +42,9 @@ object RecordExamples extends Specification {
 
 	val debug = false
 
-	doFirst { // create the Mongo instance
-		MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
+	doFirst {
+		// define the db
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost("localhost", 27017), "test"))
 	}
 
 	"TestRecord example" in {
@@ -270,8 +271,8 @@ object RecordExamples extends Specification {
   		ListDoc.drop
   		
   		// drop the database
-  		MongoDB.useAdmin {
-  			dba => dba.dropDatabase()
+  		MongoDB.use {
+  			db => db.dropDatabase()
   		}
   	}
 

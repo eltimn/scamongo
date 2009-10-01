@@ -33,8 +33,11 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject}
 
 object DirectExamples extends Specification {
 
-	doFirst { // create the Mongo instance
-		MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
+	doFirst { 
+		// create a Mongo instance
+		val mongoHost = MongoHost("localhost", 27017)
+		// define the db
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test"))
 	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer
@@ -108,7 +111,7 @@ object DirectExamples extends Specification {
 	"Mongo tutorial 2 example" in {
 
 		// use a DBCollection directly
-		MongoDB.useCollection(DefaultMongoIdentifier, "iDoc") ( coll => {
+		MongoDB.useCollection("iDoc") ( coll => {
 			// insert multiple documents
 			for (i <- List.range(1, 101)) {
 				coll.insert(new BasicDBObject().append("i", i))
@@ -208,7 +211,7 @@ object DirectExamples extends Specification {
 
   "Mongo useSession example" in {
   	// use a Mongo instance directly with a session
-  	MongoDB.useSession(DefaultMongoIdentifier) ( db => {
+  	MongoDB.useSession ( db => {
 			val coll = db.getCollection("testCollection")
 
 			// create a unique index on name
@@ -298,8 +301,8 @@ object DirectExamples extends Specification {
 			})
 			
 			// drop the database
-  		MongoDB.useAdmin {
-  			dba => dba.dropDatabase()
+  		MongoDB.use {
+  			db => db.dropDatabase()
   		}
 		}
 		

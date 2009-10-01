@@ -29,13 +29,26 @@ import net.liftweb.json.JsonDSL._
 
 import com.mongodb.{BasicDBList, BasicDBObject, ObjectId}
 
+/*
+* MongoIdentifiers
+*/
+object TestDBa extends MongoIdentifier {
+	val jndiName = "test_a"
+}
+object TestDBb extends MongoIdentifier {
+	val jndiName = "test_b"
+}
+
 //class JsonExampleTest extends Runner(JsonExamples) with JUnit
 object JsonExamples extends Specification {
 
-	doFirst { // create the Mongo instances
-		MongoDB.defineMongo(DefaultMongoIdentifier, new MongoAddress("localhost", 27017, "test"))
-		MongoDB.defineMongo(TestDBa, new MongoAddress("localhost", 27017, "test_a"))
-		MongoDB.defineMongo(TestDBb, new MongoAddress("localhost", 27017, "test_b"))
+	doFirst {
+		// create a Mongo instance
+		val mongoHost = MongoHost("localhost", 27017)
+		// define the dbs
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test"))
+		MongoDB.defineDb(TestDBa, MongoAddress(mongoHost, "test_a"))
+		MongoDB.defineDb(TestDBb, MongoAddress(mongoHost, "test_b"))
  	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer
@@ -352,7 +365,6 @@ object JsonExamples extends Specification {
 			if (!debug) {
 				// delete them
 				TestCollection.delete(qry)
-				db.getLastError.get("n") must_== 2
 				TestCollection.findAll.size must_== 0
 			}
 
@@ -447,30 +459,20 @@ object JsonExamples extends Specification {
   		RefJDoc.drop
   		
   		// drop the databases
-  		MongoDB.useAdmin {
-  			dba => dba.dropDatabase()
+  		MongoDB.use {
+  			db => db.dropDatabase()
   		}
-  		MongoDB.useAdmin(TestDBa) {
-  			dba => dba.dropDatabase()
+  		MongoDB.use(TestDBa) {
+  			db => db.dropDatabase()
   		}
-  		MongoDB.useAdmin(TestDBb) {
-  			dba => dba.dropDatabase()
+  		MongoDB.use(TestDBb) {
+  			db => db.dropDatabase()
   		}
 		}
 
 		// clear the mongo instances
 		MongoDB.close
   }
-}
-
-/*
-* MongoIdentifiers
-*/
-object TestDBa extends MongoIdentifier {
-	val jndiName = "test_a"
-}
-object TestDBb extends MongoIdentifier {
-	val jndiName = "test_b"
 }
 
 /*

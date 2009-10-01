@@ -176,14 +176,14 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/*
 	* Save a document to the db using the given Mongo instance
 	*/
-	def save(in: BaseDocument, db: DBBase): BaseDocument = {
+	def save(in: BaseDocument, db: DB): BaseDocument = {
 		create(db.getCollection(collectionName).save(JObjectParser.parse(toJObject(in))))
 	}
 
 	/*
 	* Update document with a JObject query using the given Mongo instance
 	*/
-	def update(qry: JObject, newbd: BaseDocument, db: DBBase, opts: UpdateOption*): BaseDocument = {
+	def update(qry: JObject, newbd: BaseDocument, db: DB, opts: UpdateOption*): BaseDocument = {
 		create(update(qry, toJObject(newbd), db, opts :_*))
 	}
 

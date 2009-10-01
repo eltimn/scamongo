@@ -247,7 +247,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/*
 	* Save a document to the db using the given Mongo instance
 	*/
-	def save(inst: BaseRecord, db: DBBase): Boolean = {
+	def save(inst: BaseRecord, db: DB): Boolean = {
 		foreachCallback(inst, _.beforeSave)
 		try {
 			db.getCollection(collectionName).save(toDBObject(inst))
@@ -269,7 +269,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/*
 	* Update document with a JObject query using the given Mongo instance
 	*/
-	def update(qry: JObject, newbr: BaseRecord, db: DBBase, opts: UpdateOption*): BaseRecord = {
+	def update(qry: JObject, newbr: BaseRecord, db: DB, opts: UpdateOption*): BaseRecord = {
 		createRecord(update(JObjectParser.parse(qry), toDBObject(newbr), db, opts :_*)) openOr createRecord
 	}
 
@@ -285,7 +285,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/*
 	* Update document with a Map query using the given Mongo instance
 	*/
-	def update(qry: Map[String, Any], newbr: BaseRecord, db: DBBase, opts: UpdateOption*): BaseRecord = {
+	def update(qry: Map[String, Any], newbr: BaseRecord, db: DB, opts: UpdateOption*): BaseRecord = {
 		createRecord(update(MapParser.parse(qry), toDBObject(newbr), db, opts :_*)) openOr createRecord
 	}
 

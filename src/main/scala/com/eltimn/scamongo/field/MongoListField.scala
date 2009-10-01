@@ -18,7 +18,7 @@ package com.eltimn.scamongo
 
 import java.util.Date
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.jcl.Conversions._
 
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.http.js.JE.Str
@@ -91,10 +91,9 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 
 	// set this field's value using a DBObject returned from Mongo.
 	def setFromDBObject(dbo: DBObject): Box[List[ListType]] = {
-		val ret = new ListBuffer[ListType]
-		for (k <- dbo.keySet.toArray) {
+		val ret = dbo.keySet.map(k => {
 			dbo.get(k.toString) match {
-				case x if primitive_?(x.getClass) => ret += x.asInstanceOf[ListType]
+				case x if primitive_?(x.getClass) => x.asInstanceOf[ListType]
 				//case x if mongotype_?(x.getClass) => ret += dbovalue2mongotype(x))
 				/* How do I find out what type ListType is?
 				case dbo: BasicDBObject => ListType match {
@@ -105,21 +104,13 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 				}
 				*/
 				case dbo: BasicDBObject if (dbo.containsField("ref") && dbo.containsField("id") && dbo.keySet.size == 2) =>
-					ret += MongoRef(dbo.get("ref").toString, dbo.get("id").toString).asInstanceOf[ListType]
+					MongoRef(dbo.get("ref").toString, dbo.get("id").toString).asInstanceOf[ListType]
 				case o => {
-					ret += o.asInstanceOf[ListType]
+					o.asInstanceOf[ListType]
 				}
 			}
-		}
+		})
 		Full(set(ret.toList))
-		/*
-		for {
-			k <- dbo.keySet.toArray
-			dbo.get(k.toString) match {
-
-			}
-		} yield
-		*/
 	}
 }
 
@@ -130,17 +121,13 @@ class MongoDateListField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	extends MongoListField[OwnerType, Date](rec: OwnerType) {
 
 	override def setFromDBObject(dbo: DBObject): Box[List[Date]] = {
-		val ret = new ListBuffer[Date]
-		for (k <- dbo.keySet.toArray) {
+		val ret = dbo.keySet.map( k => {
 			dbo.get(k.toString) match {
-				case s: String=> owner.meta.formats.dateFormat.parse(s) match {
-					case Some(d: Date) => ret += d
-					case _ =>
-				}
-				case _ =>
+				case s: String => owner.meta.formats.dateFormat.parse(s) 
+				case _ => None
 			}
-		}
-		Full(set(ret.toList))
+		})
+		Full(set(ret.toList.filter(_.isDefined).map(x => x.get)))
 	}
 }
 
@@ -152,10 +139,9 @@ class MongoJObjectListField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	
 	override def setFromDBObject(dbo: DBObject): Box[List[JObject]] = {
 		implicit val formats = owner.meta.formats
-		val ret = new ListBuffer[JObject]
-		for (k <- dbo.keySet.toArray) {
-			ret += JObjectParser.serialize(dbo.get(k.toString)).asInstanceOf[JObject]
-		}
+		val ret = dbo.keySet.map( k => {
+			JObjectParser.serialize(dbo.get(k.toString)).asInstanceOf[JObject]
+		})
 		Full(set(ret.toList))
 	}
 }

@@ -59,17 +59,48 @@ import com.mongodb._
 * The default MongoIdentifier
 */
 case object DefaultMongoIdentifier extends MongoIdentifier {
-  val jndiName = "mongo"
+  val jndiName = "test"
 }
 
 /*
 * Wrapper for DBAddress
-*/
+
 case class MongoAddress(host: String, port: Int, name: String) {
 
 	def toDBAddress = new DBAddress(host, port, name)
 
 	override def toString = host+":"+port+"/"+name
+}
+*/
+
+/*
+* Wrapper for getting a reference to a db from the given Mongo instance
+*/
+case class MongoAddress(host: MongoHost, name: String) {
+	def db = host.mongo.getDB(name)
+	
+	override def toString = host.host+":"+host.port+"/"+name
+}
+
+/*
+* Wrapper for creating a Mongo instance
+*/
+abstract class MongoBase {
+	def mongo: Mongo
+}
+case class MongoHost(host: String, port: Int) extends MongoBase {
+	val mongo = new Mongo(host, port)
+}
+object MongoHost {
+	def apply(): MongoHost = MongoHost("localhost", 27017)
+	def apply(host: String): MongoHost = MongoHost(host, 27017)
+}
+
+/*
+* Wrapper for creating a Paired Mongo instance
+*/
+case class MongoPair(left: DBAddress, right: DBAddress) extends MongoBase {
+	val mongo = new Mongo(left, right)
 }
 
 /*
@@ -78,20 +109,33 @@ case class MongoAddress(host: String, port: Int, name: String) {
 object MongoDB {
 
 	/*
-	* HashMap of Mongo instances, keyed by MongoIdentifier
+	* HashMap of Mongo instances, keyed by host+port hash
+	
+	private val mongos = new MutableHashMap[MongoHost, Mongo]
 	*/
-	private val mongos = new MutableHashMap[MongoIdentifier, Mongo]
+	/*
+	* HashMap of db names + Mongo hash, keyed by MongoIdentifier
+	*/
+	private val dbs = new MutableHashMap[MongoIdentifier, MongoAddress]
 
 	/*
-	* Define a Mongo instance
+	* Define a Mongo db
 	*/
-	def defineMongo(name: MongoIdentifier, address: MongoAddress) {
-    mongos(name) = new Mongo(address.toDBAddress)
+	def defineDb(name: MongoIdentifier, address: MongoAddress) {
+    dbs(name) = address
   }
+  
+  /*
+	* Define a Mongo instance in paired mode
+	
+	def defineMongo(name: MongoIdentifier, left: MongoAddress, right: MongoAddress) {
+    mongos(name) = new Mongo(left.toDBAddress, right.toDBAddress)
+  }
+  */
 
   /*
 	* Define a Mongo instance with authorization
-	*/
+	
 	def defineMongoAuth(name: MongoIdentifier, address: MongoAddress, username: String, password: String) {
 
 		val newMongo = new Mongo(address.toDBAddress)
@@ -101,26 +145,45 @@ object MongoDB {
 
     mongos(name) = newMongo
   }
+*/
+	def defineDbAuth(name: MongoIdentifier, address: MongoAddress, username: String, password: String) {
 
-	/*
-	* Get a Mongo instance based on a MongoIdentifier
-	*/
-  private def getMongo(name: MongoIdentifier): Option[DBBase] = mongos.get(name)
+		if (!address.db.authenticate(username, password))
+			throw new MongoException("Authorization failed: "+address.toString)
 
+    dbs(name) = address
+  }
+  
   /*
-  * Get a Mongo collection. Gets a Mongo first.
+  * Get a DB reference
+  */
+  private def getDb(name: MongoIdentifier): Option[DB] = dbs.get(name) match {
+  	case Some(ma: MongoAddress) => Some(ma.db)
+  	case _ => None
+  }
+  
+  /*
+	* Get the Mongo instance based on a MongoIdentifier
+	
+  private def getMongo(name: MongoIdentifier): Option[Mongo] = dbs.get(name) match {
+  	case Some(ma: MongoAddress) => Some(ma.host.mongo)
+  	case _ => None
+  }
+*/
+  /*
+  * Get a Mongo collection. Gets a Mongo db first.
 	*/
-  private def getCollection(name: MongoIdentifier, collectionName: String): Option[DBCollection] = getMongo(name) match {
+  private def getCollection(name: MongoIdentifier, collectionName: String): Option[DBCollection] = getDb(name) match {
   	case Some(mongo) if mongo != null => Some(mongo.getCollection(collectionName))
   	case _ => None
   }
 
   /**
-  * Executes function {@code f} with the mongo named {@code name}.
+  * Executes function {@code f} with the mongo db named {@code name}.
   */
-  def use[T](name: MongoIdentifier)(f: (DBBase) => T): T = {
+  def use[T](name: MongoIdentifier)(f: (DB) => T): T = {
 
-  	val db = getMongo(name) match {
+  	val db = getDb(name) match {
 			case Some(mongo) => mongo
 			case _ => throw new MongoException("Mongo not found: "+name.toString)
 		}
@@ -131,9 +194,9 @@ object MongoDB {
   /**
   * Executes function {@code f} with the mongo named {@code name}. Uses the default mongoIdentifier
   */
-  def use[T](f: (DBBase) => T): T = {
+  def use[T](f: (DB) => T): T = {
 
-  	val db = getMongo(DefaultMongoIdentifier) match {
+  	val db = getDb(DefaultMongoIdentifier) match {
 			case Some(mongo) => mongo
 			case _ => throw new MongoException("Mongo not found: "+DefaultMongoIdentifier.toString)
 		}
@@ -141,31 +204,6 @@ object MongoDB {
 		f(db)
   }
   
-  /**
-  * Executes function {@code f} with the mongo admin named {@code name}.
-  */
-  def useAdmin[T](name: MongoIdentifier)(f: (MongoAdmin) => T): T = {
-
-  	val dba = getMongo(name) match {
-			case Some(mongo) => new MongoAdmin(mongo.getAddress)
-			case _ => throw new MongoException("Mongo not found: "+name.toString)
-		}
-
-		f(dba)
-  }
-
-  /**
-  * Executes function {@code f} with the default mongoIdentifier
-  */
-  def useAdmin[T](f: (MongoAdmin) => T): T = {
-
-  	val dba = getMongo(DefaultMongoIdentifier) match {
-			case Some(mongo) => new MongoAdmin(mongo.getAddress)
-			case _ => throw new MongoException("Mongo not found: "+DefaultMongoIdentifier.toString)
-		}
-
-		f(dba)
-  }
 
   /**
   * Executes function {@code f} with the mongo named {@code name} and collection names {@code collectionName}.
@@ -193,14 +231,14 @@ object MongoDB {
   }
 
   /**
-  * Executes function {@code f} with the mongo named {@code name}. Uses the same socket
+  * Executes function {@code f} with the mongo db named {@code name}. Uses the same socket
   * for the entire function block. Allows multiple operations on the same thread and the
   * use of getLastError.
   * See: http://www.mongodb.org/display/DOCS/Java+Driver+Concurrency
   */
-  def useSession[T](name: MongoIdentifier)(f: (DBBase) => T): T = {
+  def useSession[T](name: MongoIdentifier)(f: (DB) => T): T = {
 
-  	val db = getMongo(name) match {
+  	val db = getDb(name) match {
 			case Some(mongo) => mongo
 			case _ => throw new MongoException("Mongo not found: "+name.toString)
 		}
@@ -219,9 +257,9 @@ object MongoDB {
   /**
   * Same as above except uses DefaultMongoIdentifier
   */
-  def useSession[T](f: (DBBase) => T): T = {
+  def useSession[T](f: (DB) => T): T = {
 
-  	val db = getMongo(DefaultMongoIdentifier) match {
+  	val db = getDb(DefaultMongoIdentifier) match {
 			case Some(mongo) => mongo
 			case _ => throw new MongoException("Mongo not found: "+DefaultMongoIdentifier.toString)
 		}
@@ -239,7 +277,7 @@ object MongoDB {
 
   //
   def close {
-  	mongos.clear
+  	dbs.clear
   }
 }
 
@@ -447,7 +485,7 @@ trait MongoMeta[BaseDocument] {
 	/*
 	* Update document with a DBObject query using the given Mongo instance.
 	*/
-	def update(qry: DBObject, newobj: DBObject, db: DBBase, opts: UpdateOption*): DBObject = {
+	def update(qry: DBObject, newobj: DBObject, db: DB, opts: UpdateOption*): DBObject = {
 		val dboOpts = opts.toList
 		db.getCollection(collectionName).update(
 			qry,
@@ -461,7 +499,7 @@ trait MongoMeta[BaseDocument] {
 	* Update document with a JObject query using the given Mongo instance.
 	* For use with modifier operations $inc, $set, $push...
 	*/
-	def update(qry: JObject, newobj: JObject, db: DBBase, opts: UpdateOption*): JObject = {
+	def update(qry: JObject, newobj: JObject, db: DB, opts: UpdateOption*): JObject = {
 		// these updates return the modifier object, not the object that was updated.
 		JObjectParser.serialize(update(
 			JObjectParser.parse(qry),
@@ -483,7 +521,7 @@ trait MongoMeta[BaseDocument] {
 	/*
 	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
 	*/
-	def update(qry: Map[String, Any], newobj: Map[String, Any], db: DBBase, opts: UpdateOption*): DBObject = {
+	def update(qry: Map[String, Any], newobj: Map[String, Any], db: DB, opts: UpdateOption*): DBObject = {
 		// these updates return the modifier object, not the object that was updated.
 		update(
 			MapParser.parse(qry),

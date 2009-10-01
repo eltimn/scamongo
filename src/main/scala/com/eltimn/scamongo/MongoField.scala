@@ -84,7 +84,7 @@ trait MongoFieldFlavor[MyType] {
 	// assume string is json
 	def setFromString(in: String): Box[MyType] = {
 		// use Mongo parser to convert to DBObject
-		setFromDBObject(JSON.parse(in))
+		setFromDBObject(JSON.parse(in).asInstanceOf[DBObject])
 	}
 
 }
