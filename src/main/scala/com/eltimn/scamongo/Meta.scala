@@ -17,74 +17,19 @@ package com.eltimn.scamongo
  */
 
 private[scamongo] object Meta {
-/*
-	sealed abstract class MValue {
-    type Values
 
-    def apply(i: Int): MValue = MNothing
-
-    def values: Values
-
-    def children = this match {
-    /*
-      case JObject(l) => l
-      case JArray(l) => l
-      case JField(n, v) => List(v)
-     */
-      case _ => Nil
-    }
-  }
-  case object MNothing extends MValue {
-    type Values = Nothing
-    def values = error("nothing contains no values")
-  }
-  case object MNull extends MValue {
-    type Values = Null
-    def values = null
-  }
-  case class MString(s: String) extends MValue {
-    type Values = String
-    def values = s
-  }
-  case class MDouble(num: Double) extends MValue {
-    type Values = Double
-    def values = num
-  }
-  case class MInt(num: BigInt) extends MValue {
-    type Values = BigInt
-    def values = num
-  }
-  case class MBool(value: Boolean) extends MValue {
-    type Values = Boolean
-    def values = value
-  }
-  case class MField(name: String, value: MValue) extends MValue {
-    type Values = (String, value.Values)
-    def values = (name, value.values)
-    override def apply(i: Int): MValue = value(i)
-  }
-  case class MObject(obj: List[MField]) extends MValue {
-    type Values = Map[String, Any]
-    def values = Map() ++ obj.map(_.values.asInstanceOf[(String, Any)]) // FIXME compiler fails if cast is removed
-  }
-  case class MArray(arr: List[MValue]) extends MValue {
-    type Values = List[Any]
-    def values = arr.map(_.values)
-    override def apply(i: Int): MValue = arr(i)
-  }
-*/
 	/*
 	* For converting scala objects into DBObject values
 	*/
 	object Reflection {
     import java.lang.reflect._
-    import java.util.{Calendar, Date}
+    import java.util.{Calendar, Date, GregorianCalendar}
     import java.util.regex.Pattern
 
 		import net.liftweb.json.Formats
     import net.liftweb.json.JsonAST._
 
-    import com.mongodb.{BasicDBObject, ObjectId}
+    import com.mongodb.{BasicDBObject, DBRef, ObjectId}
 
 		/*
 		* These don't require a conversion and can be put directly into a DBObject
@@ -120,19 +65,11 @@ private[scamongo] object Meta {
       case x: java.lang.Short => JInt(BigInt(x.asInstanceOf[Short]))
       case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
     }
-/*
-    def primitive2mvalue(a: Any) = a match {
 
-    	case b: Boolean => java.lang.Boolean.valueOf(b)
-			case c: Calendar => c //c.getTime
-			case n: Number => n
-			case s: String => s
-			case _ => error("not a primitive " + a.asInstanceOf[AnyRef].getClass)
-
-    }
-*/
-
-		val datetypes = Set[Class[_]](classOf[Calendar], classOf[Date])
+		/*
+		* Date types require formatting
+		*/
+		val datetypes = Set[Class[_]](classOf[Calendar], classOf[Date], classOf[GregorianCalendar])
 		
 		def datetype_?(clazz: Class[_]) = datetypes contains clazz
 		
@@ -147,13 +84,14 @@ private[scamongo] object Meta {
 		}
 
     val mongotypes = Set[Class[_]](
-    	classOf[MongoRef], classOf[JObject], //classOf[JsonObject[Any]],
+    	classOf[DBRef], classOf[MongoRef], classOf[JObject], //classOf[JsonObject[Any]],
     	classOf[ObjectId], classOf[Pattern], classOf[Map[String, Any]])
 
     def mongotype_?(clazz: Class[_]) = mongotypes contains clazz
 
     def mongotype2dbovalue(a: Any)(implicit formats: Formats) = a match {
     	case MongoRef(r, i) => new BasicDBObject("ref", r).append("id", i)
+    	case dbref: DBRef => dbref
     	case jo: JObject => JObjectParser.parse(jo) // Any JObject
 			//case jo: JsonObject[Any] => JObjectParser.parse(jo.asJObject) // A case class that extends JsonObject
 			case m: Map[String, Any] => MapParser.parse(m)

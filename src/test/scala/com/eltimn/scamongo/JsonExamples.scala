@@ -282,16 +282,16 @@ object JsonExamples extends Specification {
 		list3.length must_== 3
 
 		// skip
-		val list4 = IDoc.findAll(("i" -> ("$gt" -> 50)), Skip(10))
+		val list4 = IDoc.findAll(("i" -> ("$gt" -> 50)), ("i" -> 1), Skip(10))
+		list4.size must_== 40
 		var cntr4 = 0
 		for (idoc <- list4) {
 			cntr4 += 1
 			idoc.i must_== 60+cntr4
 		}
-		list4.length must_== 40
 
 		// skip and limit (get first 10, skipping the first 5, where i > 50)
-		val list5 = IDoc.findAll(("i" -> ("$gt" -> 50)), Limit(10), Skip(5))
+		val list5 = IDoc.findAll(("i" -> ("$gt" -> 50)), ("i" -> 1), Limit(10), Skip(5))
 		var cntr5 = 0
 		for (idoc <- list5) {
 			cntr5 += 1
@@ -444,7 +444,6 @@ object JsonExamples extends Specification {
 		val mdq3 = MainJDoc.findAll("_id", md1._id)
 		mdq3.size must_== 1
 
-
   }
 
   doLast {
@@ -460,13 +459,13 @@ object JsonExamples extends Specification {
   		
   		// drop the databases
   		MongoDB.use {
-  			db => db.dropDatabase()
+  			db => db.dropDatabase
   		}
   		MongoDB.use(TestDBa) {
-  			db => db.dropDatabase()
+  			db => db.dropDatabase
   		}
   		MongoDB.use(TestDBb) {
-  			db => db.dropDatabase()
+  			db => db.dropDatabase
   		}
 		}
 
@@ -523,8 +522,8 @@ case class IDoc(_id: String, i: Int) extends MongoDocument[IDoc] {
 
 object IDoc extends MongoDocumentMeta[IDoc] {
 
-	// create an index on "i", ascending with name and Force
-	ensureIndex(("i" -> 1), "i_ix1", Force)
+	// create an index on "i", descending with name and Force
+	ensureIndex(("i" -> -1), "i_ix1", Force)
 }
 
 /*

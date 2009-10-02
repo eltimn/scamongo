@@ -66,7 +66,7 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 
 	/*
 	* Convert this field's value into a DBObject so it can be stored in Mongo.
-	* Compatible with most object types. Including Pattern, ObjectId, DBRef, JObject,
+	* Compatible with most object types. Including Pattern, ObjectId, JObject,
 	* and JsonObject case classes
 	* Override this method for custom logic.
 	*/
@@ -78,6 +78,7 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 		value.foreach {
 			case jo: JsonObject[Any] => dbl.add(JObjectParser.parse(jo.asJObject)) // A case class that extends JsonObject
 			//case jo: JObject => dbl.add(JObjectParser.parse(jo)) // Any JObject
+			case dbref: DBRef => dbl.add(dbref)
 			case m: Map[String, Any] => dbl.add(MapParser.parse(m))
 			case f =>	f.asInstanceOf[AnyRef] match {
 				case x if primitive_?(x.getClass) => dbl.add(x)
@@ -93,6 +94,16 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 	def setFromDBObject(dbo: DBObject): Box[List[ListType]] = {
 		val ret = dbo.keySet.map(k => {
 			dbo.get(k.toString) match {
+				/* DBRef */
+				case dbo: BasicDBObject if (dbo.containsField("$ref") && dbo.containsField("$id")) => {
+					/* 
+					* this uses the owner db, not the referered collection's db (this is stored elsewhere)
+					* Need to be able to lookup collection class name from collection name.
+					*/
+					MongoDB.use(owner.meta.mongoIdentifier) ( db =>
+						new DBRef(db, dbo.get("$ref").toString, dbo.get("$id").asInstanceOf[ObjectId]).asInstanceOf[ListType]
+					)
+				}
 				case x if primitive_?(x.getClass) => x.asInstanceOf[ListType]
 				//case x if mongotype_?(x.getClass) => ret += dbovalue2mongotype(x))
 				/* How do I find out what type ListType is?
@@ -103,11 +114,7 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 					}
 				}
 				*/
-				case dbo: BasicDBObject if (dbo.containsField("ref") && dbo.containsField("id") && dbo.keySet.size == 2) =>
-					MongoRef(dbo.get("ref").toString, dbo.get("id").toString).asInstanceOf[ListType]
-				case o => {
-					o.asInstanceOf[ListType]
-				}
+				case o => o.asInstanceOf[ListType]
 			}
 		})
 		Full(set(ret.toList))

@@ -31,7 +31,7 @@ package com.eltimn.scamongo
 * TODO: OptionField (or Box)
 * TODO: CaseClassField
 * TODO: MongoRefField fetch
-* TODO: DBRefBase ($ - problems)
+* TODO: DBRef ($ - problems)
 * TODO: Calendar ??
 * Document
 * TODO: save, update safe. Return Option.
@@ -61,17 +61,6 @@ import com.mongodb._
 case object DefaultMongoIdentifier extends MongoIdentifier {
   val jndiName = "test"
 }
-
-/*
-* Wrapper for DBAddress
-
-case class MongoAddress(host: String, port: Int, name: String) {
-
-	def toDBAddress = new DBAddress(host, port, name)
-
-	override def toString = host+":"+port+"/"+name
-}
-*/
 
 /*
 * Wrapper for getting a reference to a db from the given Mongo instance
@@ -109,12 +98,7 @@ case class MongoPair(left: DBAddress, right: DBAddress) extends MongoBase {
 object MongoDB {
 
 	/*
-	* HashMap of Mongo instances, keyed by host+port hash
-	
-	private val mongos = new MutableHashMap[MongoHost, Mongo]
-	*/
-	/*
-	* HashMap of db names + Mongo hash, keyed by MongoIdentifier
+	* HashMap of MongoAddresses, keyed by MongoIdentifier
 	*/
 	private val dbs = new MutableHashMap[MongoIdentifier, MongoAddress]
 
@@ -126,28 +110,9 @@ object MongoDB {
   }
   
   /*
-	* Define a Mongo instance in paired mode
-	
-	def defineMongo(name: MongoIdentifier, left: MongoAddress, right: MongoAddress) {
-    mongos(name) = new Mongo(left.toDBAddress, right.toDBAddress)
-  }
+  * Define and authenticate a Mongo db
   */
-
-  /*
-	* Define a Mongo instance with authorization
-	
-	def defineMongoAuth(name: MongoIdentifier, address: MongoAddress, username: String, password: String) {
-
-		val newMongo = new Mongo(address.toDBAddress)
-
-		if (!newMongo.authenticate(username, password))
-			throw new MongoException("Authorization failed: "+address.toString)
-
-    mongos(name) = newMongo
-  }
-*/
 	def defineDbAuth(name: MongoIdentifier, address: MongoAddress, username: String, password: String) {
-
 		if (!address.db.authenticate(username, password))
 			throw new MongoException("Authorization failed: "+address.toString)
 
@@ -204,7 +169,6 @@ object MongoDB {
 		f(db)
   }
   
-
   /**
   * Executes function {@code f} with the mongo named {@code name} and collection names {@code collectionName}.
   * Gets a collection for you.
@@ -282,15 +246,6 @@ object MongoDB {
 }
 
 /*
-* The default Mongo Formats
-* dates use UTC and this format
-
-object MongoFormats extends DefaultFormats {
-	import java.text.SimpleDateFormat
-	override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-}
-*/
-/*
 * Helper methods
 */
 object MongoHelpers {
@@ -347,8 +302,7 @@ trait MongoMeta[BaseDocument] {
 	//def collectionName = fixCollectionName(_collectionName)
 	def collectionName: String = fixCollectionName
 
-	// override this to specify a MongoIdentifier for this MongoDocumnet type
-  //def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
+	// override this to specify a MongoIdentifier for this MongoDocument type
   def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
   
   // override this for custom Formats (date)
@@ -581,11 +535,6 @@ trait JsonObject[BaseDocument] {
 class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 
 	import net.liftweb.json.Extraction._
-	
-	/* override this for custom Formats (date)
-  def joformats: Formats = DefaultFormats //.lossless
-	private lazy val _joformats: Formats = joformats
-	*/
 
 	// create an instance of BaseDocument from a JObject
 	def create(in: JObject)(implicit formats: Formats): BaseDocument =
@@ -603,6 +552,4 @@ class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 case class MongoRef(ref: String, id: String) {
 	def objectId = new ObjectId(id)
 }
-/*extends JsonObject[DBRef]
-object DBRef extends JsonObjectMeta*/
 

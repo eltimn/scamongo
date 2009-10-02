@@ -345,8 +345,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 				*/
 				case Full(field: MongoFieldFlavor[Any]) =>
 					dbo.add(f.name, field.asInstanceOf[MongoFieldFlavor[Any]].asDBObject)
-				case Full(field) if field.value.isInstanceOf[Calendar] =>
-					dbo.add(f.name, formats.dateFormat.format(field.value.asInstanceOf[Calendar].getTime))
 				case Full(field) => field.value.asInstanceOf[AnyRef] match {
 					case x if primitive_?(x.getClass) => dbo.add(f.name, x)
 					case x if datetype_?(x.getClass) => dbo.add(f.name, datetype2dbovalue(x)(formats))

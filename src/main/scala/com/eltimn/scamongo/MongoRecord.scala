@@ -20,11 +20,11 @@ import net.liftweb.util.{Box, Full}
 import net.liftweb.record.{MetaRecord, Record}
 import net.liftweb.record.field.StringField
 
-import com.mongodb.{BasicDBObject, DBObject, DBRefBase}
+import com.mongodb.{BasicDBObject, DBObject, DBRef}
 
 trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	self: MyType =>
-	
+
 	/*
 	* every mongo record must have an _id field. Override this with the value of your _id object.
 	*/
@@ -44,7 +44,7 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	* Save the instance and return the instance
 	*/
 	def save(): MyType = {
-		
+
 		runSafe {
 			meta.save(this)
 		}
@@ -81,7 +81,7 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	/**
 	* Append a function to perform after the commit happens
 	* @param func - the function to perform after the commit happens
-	
+
 	def doPostCommit(func: () => Unit) {
 		//DB.appendPostFunc(connectionIdentifier, func)
 	}
@@ -102,17 +102,16 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 */
 trait MongoId[OwnerType <: MongoRecord[OwnerType]] {
   //self: OwnerType =>
-  
+
   import field.MongoIdField
-  
+
 	object _id extends MongoIdField(this.asInstanceOf[OwnerType])
 
   // convenience method that returns the value of _id
   def id = _id.value
-  
-  //def getRefBase: DBRefBase = _id.getRefBase
-  def getRef: MongoRef = _id.getRef
 
-  //def getDbRef = new DBRefBase(owner.meta.getDb, owner.meta.collectionName, value)
-  //def getRef = MongoDbRef(this.asInstanceOf[OwnerType].owner.meta.getDb.toString, owner.meta.collectionName, this.asInstanceOf[OwnerType].value)
+ 	/*
+ 	*
+ 	*/
+  def getRef: DBRef = _id.getRef
 }
