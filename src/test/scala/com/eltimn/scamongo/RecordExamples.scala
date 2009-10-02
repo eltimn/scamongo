@@ -107,6 +107,12 @@ object RecordExamples extends Specification {
 
   	ref1.save must_== ref1
   	ref2.save must_== ref2
+  	
+  	val refString1 = RefStringDoc.createRecord
+  	val refString2 = RefStringDoc.createRecord
+
+  	refString1.save must_== refString1
+  	refString2.save must_== refString2
 
   	val md1 = MainDoc.createRecord
   	val md2 = MainDoc.createRecord
@@ -122,6 +128,11 @@ object RecordExamples extends Specification {
   	md2.refdoc.set(ref1.getRef)
   	md3.refdoc.set(ref2.getRef)
   	md4.refdoc.set(ref2.getRef)
+  	
+  	md1.refstringdoc.set(refString1.getRef)
+  	md2.refstringdoc.set(refString1.getRef)
+  	md3.refstringdoc.set(refString2.getRef)
+  	md4.refstringdoc.set(refString2.getRef)
 
   	md1.save must_== md1
   	md2.save must_== md2
@@ -130,6 +141,7 @@ object RecordExamples extends Specification {
 
   	MainDoc.count must_== 4
   	RefDoc.count must_== 2
+  	RefStringDoc.count must_== 2
 
   	// fetch a refdoc
   	val refFromFetch = md1.refdoc.fetch
@@ -173,6 +185,7 @@ object RecordExamples extends Specification {
 		val md5 = MainDoc.createRecord
 		md5.name.set("md5")
 		md5.refdoc.set(ref1.getRef)
+		md5.refstringdoc.set(refString1.getRef)
 		MainDoc.update(("name" -> "nothing"), md5, Upsert)
 		MainDoc.findAll.size must_== 5
 
@@ -191,6 +204,7 @@ object RecordExamples extends Specification {
 		val md6 = MainDoc.createRecord
 		md6.name.set("md6")
 		md6.refdoc.set(ref1.getRef)
+		md6.refstringdoc.set(refString1.getRef)
 		MainDoc.update(Map("name" -> "nothing"), md6, Upsert)
 		MainDoc.findAll.size must_== 6
 
@@ -356,23 +370,32 @@ class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
 	object name extends StringField(this, 12)
 	object cnt extends IntField(this)
 
-	object refdoc extends MongoRefField(this) {
-
-		def fetch = {
-			RefDoc.find(value.getId.asInstanceOf[ObjectId])
-		}
-	}
+	object refdoc extends MongoRefField[MainDoc, RefDoc](this, RefDoc)
+	object refstringdoc extends MongoRefField[MainDoc, RefStringDoc](this, RefStringDoc)
 }
-
-object MainDoc extends MainDoc with MongoMetaRecord[MainDoc] {
-	//override def mongoIdentifier = TestDBb
-	//override def collectionName = "mymaindocs"
-}
+object MainDoc extends MainDoc with MongoMetaRecord[MainDoc]
 
 class RefDoc extends MongoRecord[RefDoc] with MongoId[RefDoc] {
 	def meta = RefDoc
 }
 object RefDoc extends RefDoc with MongoMetaRecord[RefDoc]
+
+// string as id
+class RefStringDoc extends MongoRecord[RefStringDoc] {
+	def meta = RefStringDoc
+	
+	def id = _id.value
+	
+	object _id extends StringField(this, 36) {
+		override def defaultValue = MongoHelpers.newUUID
+	}
+	
+	def getRef: DBRef = 
+		MongoDB.use(meta.mongoIdentifier) ( db =>
+			new DBRef(db, meta.collectionName, _id.value)
+		)
+}
+object RefStringDoc extends RefStringDoc with MongoMetaRecord[RefStringDoc]
 
 class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 	def meta = ListDoc

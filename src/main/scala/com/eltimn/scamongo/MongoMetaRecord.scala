@@ -110,6 +110,14 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	def find(oid: ObjectId): Box[BaseRecord] = find(new BasicDBObject("_id", oid))
 	
 	/**
+	* Find a single row by an Object
+	* This doesn't work because we need JObject's to be implicitly converted.
+	*
+	*/
+	//def find(o: Object): Box[BaseRecord] = find(new BasicDBObject("_id", o))
+	def findAny(a: Any): Box[BaseRecord] = find(new BasicDBObject("_id", a))
+	
+	/**
 	* Find a single row by a String id
 	*/
 	def find(id: String): Box[BaseRecord] = find(new BasicDBObject("_id", id))
