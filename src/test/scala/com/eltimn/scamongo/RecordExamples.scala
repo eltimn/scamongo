@@ -107,7 +107,7 @@ object RecordExamples extends Specification {
 
   	ref1.save must_== ref1
   	ref2.save must_== ref2
-  	
+
   	val refString1 = RefStringDoc.createRecord
   	val refString2 = RefStringDoc.createRecord
 
@@ -128,11 +128,16 @@ object RecordExamples extends Specification {
   	md2.refdoc.set(ref1.getRef)
   	md3.refdoc.set(ref2.getRef)
   	md4.refdoc.set(ref2.getRef)
-  	
+
   	md1.refstringdoc.set(refString1.getRef)
   	md2.refstringdoc.set(refString1.getRef)
   	md3.refstringdoc.set(refString2.getRef)
   	md4.refstringdoc.set(refString2.getRef)
+  	
+  	md1.refdocId.set(ref1.id)
+  	md2.refdocId.set(ref1.id)
+  	md3.refdocId.set(ref2.id)
+  	md4.refdocId.set(ref2.id)
 
   	md1.save must_== md1
   	md2.save must_== md2
@@ -142,6 +147,14 @@ object RecordExamples extends Specification {
   	MainDoc.count must_== 4
   	RefDoc.count must_== 2
   	RefStringDoc.count must_== 2
+
+  	// get the docs back from the db
+  	MainDoc.find(md1.id).foreach(m => {
+  		m.refdoc.value.getId _== ref1.getRef.getId
+  		m.refdoc.value.getRef must_== ref1.getRef.getRef
+  		m.refstringdoc.value.getId _== refString1.getRef.getId
+  		m.refstringdoc.value.getRef must_== refString1.getRef.getRef
+  	})
 
   	// fetch a refdoc
   	val refFromFetch = md1.refdoc.fetch
@@ -284,7 +297,7 @@ object RecordExamples extends Specification {
 			MainDoc.drop
   		RefDoc.drop
   		ListDoc.drop
-  		
+
   		// drop the database
   		MongoDB.use {
   			db => db.dropDatabase()
@@ -370,8 +383,12 @@ class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
 	object name extends StringField(this, 12)
 	object cnt extends IntField(this)
 
-	object refdoc extends MongoRefField[MainDoc, RefDoc](this, RefDoc)
-	object refstringdoc extends MongoRefField[MainDoc, RefStringDoc](this, RefStringDoc)
+	object refdoc extends DBRefField[MainDoc, RefDoc](this, RefDoc)
+	object refstringdoc extends DBRefField[MainDoc, RefStringDoc](this, RefStringDoc)
+	
+	object refdocId extends ObjectIdField(this) {
+		def fetch = RefDoc.find(value)
+	}
 }
 object MainDoc extends MainDoc with MongoMetaRecord[MainDoc]
 
@@ -383,14 +400,14 @@ object RefDoc extends RefDoc with MongoMetaRecord[RefDoc]
 // string as id
 class RefStringDoc extends MongoRecord[RefStringDoc] {
 	def meta = RefStringDoc
-	
+
 	def id = _id.value
-	
+
 	object _id extends StringField(this, 36) {
 		override def defaultValue = MongoHelpers.newUUID
 	}
-	
-	def getRef: DBRef = 
+
+	def getRef: DBRef =
 		MongoDB.use(meta.mongoIdentifier) ( db =>
 			new DBRef(db, meta.collectionName, _id.value)
 		)
@@ -399,7 +416,7 @@ object RefStringDoc extends RefStringDoc with MongoMetaRecord[RefStringDoc]
 
 class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 	def meta = ListDoc
-	
+
 	import scala.collection.jcl.Conversions._
 
 	// standard list types

@@ -98,20 +98,24 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 }
 
 /**
-* Mix this into a Record to add a MongoIdField
+* Mix this into a Record to add an ObjectIdField
 */
 trait MongoId[OwnerType <: MongoRecord[OwnerType]] {
-  //self: OwnerType =>
+  self: OwnerType =>
 
-  import field.MongoIdField
+  import field.ObjectIdField
 
-	object _id extends MongoIdField(this.asInstanceOf[OwnerType])
+	object _id extends ObjectIdField(this.asInstanceOf[OwnerType])
 
   // convenience method that returns the value of _id
   def id = _id.value
 
  	/*
- 	*
+ 	* Get the DBRef for this record
  	*/
-  def getRef: DBRef = _id.getRef
+  def getRef: DBRef = {
+		MongoDB.use(meta.mongoIdentifier) ( db =>
+			new DBRef(db, meta.collectionName, _id.value)
+		)
+	}
 }

@@ -25,7 +25,7 @@ import com.mongodb.{ObjectId, DBRef}
 /*
 * Field for storing an ObjectId
 */
-class MongoIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
+class ObjectIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	extends Field[ObjectId, OwnerType] {
 
 	def asJs = Str(toString)
@@ -56,12 +56,6 @@ class MongoIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	def toForm = <div></div>
 
 	def owner = rec
-
-	def getRef: DBRef = {
-		MongoDB.use(owner.meta.mongoIdentifier) ( db =>
-			new DBRef(db, owner.meta.collectionName, value)
-		)
-	}
 }
 
 /*

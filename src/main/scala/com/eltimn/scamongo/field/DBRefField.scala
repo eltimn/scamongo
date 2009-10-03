@@ -21,13 +21,14 @@ import net.liftweb.record.{Field, Record}
 import net.liftweb.util.{Box, Empty, Failure, Full}
 
 import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject, DBRef, ObjectId}
+import com.mongodb.util.JSON
 
 /*
 * Field for storing a DBRef
 */
 //abstract class MongoRefField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 //abstract class MongoRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoMetaRecord[RefType]](rec: OwnerType, ref: RefType)
-abstract class MongoRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoRecord[RefType]](rec: OwnerType, ref: RefType)
+abstract class DBRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoRecord[RefType]](rec: OwnerType, ref: RefType)
 	extends Field[DBRef, OwnerType] {
 
 	/*
@@ -54,7 +55,16 @@ abstract class MongoRefField[OwnerType <: MongoRecord[OwnerType], RefType <: Mon
   }
 
   // assume string is json
-	def setFromString(in: String): Box[DBRef] = Empty
+	def setFromString(in: String): Box[DBRef] = {
+		val dbo = JSON.parse(in).asInstanceOf[BasicDBObject]
+		MongoDB.use(ref.meta.mongoIdentifier) ( db => {
+			val id = dbo.get("$id").toString
+			ObjectId.isValid(id) match {
+				case true => Full(set(new DBRef(db, dbo.get("$ref").toString, new ObjectId(id))))
+				case false => Full(set(new DBRef(db, dbo.get("$ref").toString, id)))
+			}
+		})
+	}
 
 	def toForm = <div></div>
 
