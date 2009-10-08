@@ -37,7 +37,7 @@ object DirectExamples extends Specification {
 		// create a Mongo instance
 		val mongoHost = MongoHost("localhost", 27017)
 		// define the db
-		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test"))
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test_direct"))
 	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer

@@ -78,9 +78,9 @@ private[scamongo] object Meta {
 			case x: Date => JString(formats.dateFormat.format(x))
 		}
 		
-		def datetype2dbovalue(a: Any)(implicit formats: Formats) = a match {
-			case x: Calendar => formats.dateFormat.format(x.getTime)
-			case x: Date => formats.dateFormat.format(x)
+		def datetype2dbovalue(a: Any) = a match {
+			case x: Calendar => x.getTime
+			case x: Date => x
 		}
 
     val mongotypes = Set[Class[_]](
@@ -89,7 +89,7 @@ private[scamongo] object Meta {
 
     def mongotype_?(clazz: Class[_]) = mongotypes contains clazz
 
-    def mongotype2dbovalue(a: Any)(implicit formats: Formats) = a match {
+    def mongotype2dbovalue(a: Any) = a match {
     	case MongoRef(r, i) => new BasicDBObject("ref", r).append("id", i)
     	case dbref: DBRef => dbref
     	case jo: JObject => JObjectParser.parse(jo) // Any JObject

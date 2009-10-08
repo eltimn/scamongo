@@ -130,7 +130,7 @@ class MongoDateListField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	override def setFromDBObject(dbo: DBObject): Box[List[Date]] = {
 		val ret = dbo.keySet.map( k => {
 			dbo.get(k.toString) match {
-				case s: String => owner.meta.formats.dateFormat.parse(s) 
+				case d: Date => Some(d)
 				case _ => None
 			}
 		})

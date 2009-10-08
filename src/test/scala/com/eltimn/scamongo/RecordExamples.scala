@@ -16,7 +16,7 @@ package com.eltimn.scamongo
  * and limitations under the License.
  */
 
-import java.util.{Calendar, Date}
+import java.util.{Calendar, Date, UUID}
 import java.util.regex.Pattern
 
 import scala.collection.mutable.ListBuffer
@@ -44,12 +44,12 @@ object RecordExamples extends Specification {
 
 	doFirst {
 		// define the db
-		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost("localhost", 27017), "test"))
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost("localhost", 27017), "test_record"))
 	}
 
 	"TestRecord example" in {
-
-		implicit val formats = TestRecord.formats
+	
+//		implicit val formats = TestRecord.formats
 
     val tr = TestRecord.createRecord
     tr.stringfield.set("test record string field")
@@ -62,7 +62,7 @@ object RecordExamples extends Specification {
 
     val per = RPerson("joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(now)), Child("Mazy", 3, None)))
 
-    tr.person.set(per.asJObject)
+    tr.person.set(per.asJObject()(TestRecord.formats))
 
     tr.id mustEqual newId
 
@@ -86,7 +86,7 @@ object RecordExamples extends Specification {
 			//t.passwordfield.value must_== tr.passwordfield.value
 			t.stringfield.value must_== tr.stringfield.value
 			t.timezonefield.value must_== tr.timezonefield.value
-			val p = RPerson.create(t.person.value)
+			val p = RPerson.create(t.person.value)(TestRecord.formats)
 			p.name must_== per.name
 			p.age must_== per.age
 			p.address must_== per.address
@@ -318,7 +318,7 @@ class TestRecord extends MongoRecord[TestRecord] {
 	def id = _id.value
 
 	object _id extends StringField(this, 24) {
-		override def defaultValue = MongoHelpers.newUUID
+		override def defaultValue = UUID.randomUUID.toString
 	}
 
 	//object binaryfield extends BinaryField(this)
@@ -404,7 +404,7 @@ class RefStringDoc extends MongoRecord[RefStringDoc] {
 	def id = _id.value
 
 	object _id extends StringField(this, 36) {
-		override def defaultValue = MongoHelpers.newUUID
+		override def defaultValue = UUID.randomUUID.toString
 	}
 
 	def getRef: DBRef =

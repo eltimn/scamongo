@@ -31,19 +31,17 @@ package com.eltimn.scamongo
 * TODO: OptionField (or Box)
 * TODO: CaseClassField
 * TODO: MongoRefField fetch
-* TODO: DBRef ($ - problems)
-* TODO: Calendar ??
 * Document
 * TODO: save, update safe. Return Option.
 * General
+* 
 * TODO: eval ?
 * TODO: query DSL: By, In, >=, etc.
 * TODO: Boolean, ObjectId, Date, Map query examples 
 * TODO: master/slave, replication
 * TODO: MongoAuth example
 * TODO: Test all data types
-* TODO: MongoAdmin ?
-* TODO: Binary support
+* TODO: Binary support (?)
 */
 
 import scala.collection.immutable.HashSet
@@ -74,10 +72,10 @@ case class MongoAddress(host: MongoHost, name: String) {
 /*
 * Wrapper for creating a Mongo instance
 */
-abstract class MongoBase {
+abstract class MongoHostBase {
 	def mongo: Mongo
 }
-case class MongoHost(host: String, port: Int) extends MongoBase {
+case class MongoHost(host: String, port: Int) extends MongoHostBase {
 	val mongo = new Mongo(host, port)
 }
 object MongoHost {
@@ -88,7 +86,7 @@ object MongoHost {
 /*
 * Wrapper for creating a Paired Mongo instance
 */
-case class MongoPair(left: DBAddress, right: DBAddress) extends MongoBase {
+case class MongoPair(left: DBAddress, right: DBAddress) extends MongoHostBase {
 	val mongo = new Mongo(left, right)
 }
 
@@ -196,8 +194,8 @@ object MongoDB {
 
   /**
   * Executes function {@code f} with the mongo db named {@code name}. Uses the same socket
-  * for the entire function block. Allows multiple operations on the same thread and the
-  * use of getLastError.
+  * for the entire function block. Allows multiple operations on the same thread/socket connection
+  * and the use of getLastError.
   * See: http://www.mongodb.org/display/DOCS/Java+Driver+Concurrency
   */
   def useSession[T](name: MongoIdentifier)(f: (DB) => T): T = {
@@ -246,18 +244,6 @@ object MongoDB {
 }
 
 /*
-* Helper methods
-*/
-object MongoHelpers {
-
-	import java.util.UUID
-
-	/* ID helper methods */
-  def newMongoId = ObjectId.get.toString
-  def newUUID = UUID.randomUUID.toString
-}
-
-/*
 * A trait for identfying Mongo instances
 */
 trait MongoIdentifier {
@@ -297,7 +283,7 @@ trait MongoMeta[BaseDocument] {
 	/**
 	* The name of the database collection.  Override this method if you
 	* want to change the collection to something other than the name of
-	* the MongoDocument case class with an 's' appended to the end.
+	* the class with an 's' appended to the end.
 	*/
 	//def collectionName = fixCollectionName(_collectionName)
 	def collectionName: String = fixCollectionName
@@ -540,7 +526,7 @@ class JsonObjectMeta[BaseDocument](implicit mf: Manifest[BaseDocument]) {
 	def create(in: JObject)(implicit formats: Formats): BaseDocument =
 		extract(in)(formats, mf)
 
-	// convert class to a json object
+	// convert class to a JObject
 	def toJObject(in: BaseDocument)(implicit formats: Formats): JObject =
 		decompose(in)(formats).asInstanceOf[JObject]
 }

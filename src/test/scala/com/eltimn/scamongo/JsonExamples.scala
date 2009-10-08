@@ -16,7 +16,7 @@ package com.eltimn.scamongo
  * and limitations under the License.
  */
 
-import java.util.Date
+import java.util.{Date, UUID}
 import java.util.regex.Pattern
 
 import org.specs.Specification
@@ -46,9 +46,9 @@ object JsonExamples extends Specification {
 		// create a Mongo instance
 		val mongoHost = MongoHost("localhost", 27017)
 		// define the dbs
-		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test"))
-		MongoDB.defineDb(TestDBa, MongoAddress(mongoHost, "test_a"))
-		MongoDB.defineDb(TestDBb, MongoAddress(mongoHost, "test_b"))
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test_json"))
+		MongoDB.defineDb(TestDBa, MongoAddress(mongoHost, "test_json_a"))
+		MongoDB.defineDb(TestDBb, MongoAddress(mongoHost, "test_json_b"))
  	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer
@@ -58,7 +58,7 @@ object JsonExamples extends Specification {
 	"Simple Person example" in {
 
 		// create a new SimplePerson
-		val pid = MongoHelpers.newMongoId
+		val pid = ObjectId.get.toString
 		val p = SimplePerson(pid, "Tim", 38)
 
 		// save it
@@ -108,9 +108,9 @@ object JsonExamples extends Specification {
   "Multiple Simple Person example" in {
 
 		// create new SimplePersons
-		val p = SimplePerson(MongoHelpers.newMongoId, "Jill", 27)
-		val p2 = SimplePerson(MongoHelpers.newMongoId, "Bob", 25)
-		val p3 = SimplePerson(MongoHelpers.newMongoId, "Bob", 29)
+		val p = SimplePerson(ObjectId.get.toString, "Jill", 27)
+		val p2 = SimplePerson(ObjectId.get.toString, "Bob", 25)
+		val p3 = SimplePerson(ObjectId.get.toString, "Bob", 29)
 
 		//p mustNotEqual p2
 
@@ -160,7 +160,7 @@ object JsonExamples extends Specification {
   	def date(s: String) = Person.formats.dateFormat.parse(s).get
 
 		// create a new Person
-		val p = Person(MongoHelpers.newUUID, "joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
+		val p = Person(UUID.randomUUID.toString, "joe", 27, Address("Bulevard", "Helsinki"), List(Child("Mary", 5, Some(date("2004-09-04T18:06:22Z"))), Child("Mazy", 3, None)))
 
 		//println(p.toString)
 
@@ -188,8 +188,8 @@ object JsonExamples extends Specification {
 
   	// build a TestCollection
   	val info = TCInfo(203, 102)
-  	val tc = TestCollection(MongoHelpers.newMongoId, "MongoDB", "database", 1, info)
-  	val tc2 = TestCollection(MongoHelpers.newMongoId, "OtherDB", "database", 1, info)
+  	val tc = TestCollection(ObjectId.get.toString, "MongoDB", "database", 1, info)
+  	val tc2 = TestCollection(ObjectId.get.toString, "OtherDB", "database", 1, info)
 
   	// save to db
   	tc.save
@@ -214,7 +214,7 @@ object JsonExamples extends Specification {
 		tcFromDb.get must_== tc3
 		
 		// Upsert - this should add a new row
-		val tc4 = TestCollection(MongoHelpers.newMongoId, "nothing", "document", 1, info)
+		val tc4 = TestCollection(ObjectId.get.toString, "nothing", "document", 1, info)
 		TestCollection.update(("name" -> "nothing"), tc4, Upsert)
 		TestCollection.findAll.length must_== 3
 
@@ -243,7 +243,7 @@ object JsonExamples extends Specification {
 
 		// insert multiple documents
 		for (i <- List.range(1, 101)) {
-			IDoc(MongoHelpers.newMongoId, i).save
+			IDoc(ObjectId.get.toString, i).save
     }
 
 		// count the docs
@@ -318,9 +318,9 @@ object JsonExamples extends Specification {
   "Mongo useSession example" in {
 
   	val info = TCInfo(203, 102)
-		val tc = TestCollection(MongoHelpers.newMongoId, "MongoSession", "db", 1, info)
-		val tc2 = TestCollection(MongoHelpers.newMongoId, "MongoSession", "db", 1, info)
-		val tc3 = TestCollection(MongoHelpers.newMongoId, "MongoDB", "db", 1, info)
+		val tc = TestCollection(ObjectId.get.toString, "MongoSession", "db", 1, info)
+		val tc2 = TestCollection(ObjectId.get.toString, "MongoSession", "db", 1, info)
+		val tc3 = TestCollection(ObjectId.get.toString, "MongoDB", "db", 1, info)
 
   	// use a Mongo instance directly with a session
   	MongoDB.useSession(DefaultMongoIdentifier) ( db => {
@@ -375,7 +375,7 @@ object JsonExamples extends Specification {
   
   	def date(s: String) = Primitive.formats.dateFormat.parse(s).get
   	
-  	val p = Primitive(MongoHelpers.newMongoId, 2147483647, 2147483648L, 1797693, 3.4028235F, 1000, 0, true, 512, date("2004-09-04T18:06:22Z"))
+  	val p = Primitive(ObjectId.get.toString, 2147483647, 2147483648L, 1797693, 3.4028235F, 1000, 0, true, 512, date("2004-09-04T18:06:22Z"))
 
 		// save it
 		p.save
@@ -397,16 +397,16 @@ object JsonExamples extends Specification {
 	
 	"Ref example" in {
 
-  	val ref1 = RefJDoc(MongoHelpers.newMongoId)
-  	val ref2 = RefJDoc(MongoHelpers.newMongoId)
+  	val ref1 = RefJDoc(ObjectId.get.toString)
+  	val ref2 = RefJDoc(ObjectId.get.toString)
 
   	ref1.save must_== ref1
   	ref2.save must_== ref2
 
-  	val md1 = MainJDoc(MongoHelpers.newMongoId, "md1", ref1.getRef)
-  	val md2 = MainJDoc(MongoHelpers.newMongoId, "md2", ref1.getRef)
-  	val md3 = MainJDoc(MongoHelpers.newMongoId, "md3", ref2.getRef)
-  	val md4 = MainJDoc(MongoHelpers.newMongoId, "md4", ref2.getRef)
+  	val md1 = MainJDoc(ObjectId.get.toString, "md1", ref1.getRef)
+  	val md2 = MainJDoc(ObjectId.get.toString, "md2", ref1.getRef)
+  	val md3 = MainJDoc(ObjectId.get.toString, "md3", ref2.getRef)
+  	val md4 = MainJDoc(ObjectId.get.toString, "md4", ref2.getRef)
 
   	md1.save must_== md1
   	md2.save must_== md2

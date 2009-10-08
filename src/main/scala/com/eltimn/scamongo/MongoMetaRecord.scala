@@ -355,7 +355,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 					dbo.add(f.name, field.asInstanceOf[MongoFieldFlavor[Any]].asDBObject)
 				case Full(field) => field.value.asInstanceOf[AnyRef] match {
 					case x if primitive_?(x.getClass) => dbo.add(f.name, x)
-					case x if datetype_?(x.getClass) => dbo.add(f.name, datetype2dbovalue(x)(formats))
+					case x if datetype_?(x.getClass) => dbo.add(f.name, datetype2dbovalue(x))
 					case x if mongotype_?(x.getClass) => dbo.add(f.name, mongotype2dbovalue(x))
 					case o => dbo.add(f.name, o.toString)
 				}
