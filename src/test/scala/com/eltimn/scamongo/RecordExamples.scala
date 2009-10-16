@@ -57,6 +57,7 @@ object RecordExamples extends Specification {
     tr.validate.size must_== 2
     tr.passwordfield.set("test")
     tr.emailfield.set("test@example.com")
+    tr.datetimefield.setFromAny(dateFormatter.parse("2009/01/02"))
     tr.validate.size must_== 0
     val newId = tr.id
 
@@ -86,6 +87,7 @@ object RecordExamples extends Specification {
 			//t.passwordfield.value must_== tr.passwordfield.value
 			t.stringfield.value must_== tr.stringfield.value
 			t.timezonefield.value must_== tr.timezonefield.value
+			t.datetimefield.value must_== tr.datetimefield.value
 			val p = RPerson.create(t.person.value)(TestRecord.formats)
 			p.name must_== per.name
 			p.age must_== per.age

@@ -16,34 +16,6 @@ package com.eltimn.scamongo
  * and limitations under the License.
  */
 
-/*
-* TODO: Replace ListBuffers
-* Record
-* TODO: String validators & LocaleField.localeList
-* TODO: callbacks, before/after update, before/after insert
-* TODO: save, saved_?, runSafe, try-catch
-* TODO: Map serializer
-* TODO: ListField (Map serializer, JsonObjectListField)
-* TODO: saveSafe, updateSafe methods
-* TODO: useSession example
-* TODO: PasswordField
-* TODO: MapField (Map serializer)
-* TODO: OptionField (or Box)
-* TODO: CaseClassField
-* TODO: MongoRefField fetch
-* Document
-* TODO: save, update safe. Return Option.
-* General
-* 
-* TODO: eval ?
-* TODO: query DSL: By, In, >=, etc.
-* TODO: Boolean, ObjectId, Date, Map query examples 
-* TODO: master/slave, replication
-* TODO: MongoAuth example
-* TODO: Test all data types
-* TODO: Binary support (?)
-*/
-
 import scala.collection.immutable.HashSet
 import scala.collection.mutable.{HashMap => MutableHashMap, ListBuffer}
 import scala.reflect.Manifest
