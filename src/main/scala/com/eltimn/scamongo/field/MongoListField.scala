@@ -70,7 +70,7 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 	* and JsonObject case classes
 	* Override this method for custom logic.
 	*/
-  def asDBObject(): DBObject = {
+  def asDBObject: DBObject = {
   	val dbl = new BasicDBList
 
   	implicit val formats = owner.meta.formats
