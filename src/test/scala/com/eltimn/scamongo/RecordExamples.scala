@@ -21,11 +21,11 @@ import java.util.regex.Pattern
 
 import scala.collection.mutable.ListBuffer
 
+import net.liftweb.common.{Box, Full}
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonDSL._
 import net.liftweb.json.JsonAST.JObject
-import net.liftweb.record.field._
-import net.liftweb.util.{Box, Full}
+import net.liftweb.record.field.{StringField => LStringField, LocaleField => LLocaleField, _}
 
 import org.specs.Specification
 import org.specs.runner.{Runner, JUnit}

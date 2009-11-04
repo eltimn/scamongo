@@ -16,7 +16,7 @@ package com.eltimn.scamongo
  * and limitations under the License.
  */
 
-import net.liftweb.util.{Box, Full}
+import net.liftweb.common.{Box, Full}
 import net.liftweb.record.{MetaRecord, Record}
 import net.liftweb.record.field.StringField
 

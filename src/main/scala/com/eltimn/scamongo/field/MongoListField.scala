@@ -20,10 +20,10 @@ import java.util.Date
 
 import scala.collection.jcl.Conversions._
 
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.http.js.JE.Str
 import net.liftweb.record.{Field, Record}
-import net.liftweb.util.{Box, Empty, Failure, Full}
 
 import com.mongodb._
 import com.mongodb.util.JSON

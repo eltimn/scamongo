@@ -16,11 +16,11 @@ package com.eltimn.scamongo.field
  * and limitations under the License.
  */
 
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.http.js.JE.Str
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.json.JsonParser
 import net.liftweb.record.{Field, Record}
-import net.liftweb.util.{Box, Empty, Failure, Full}
 
 class JObjectField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[JObject, OwnerType] {
 

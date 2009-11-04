@@ -18,12 +18,13 @@ package com.eltimn.scamongo
 
 import scala.xml.{Node, NodeSeq, Text}
 
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.http.{S}
 import net.liftweb.http.js.JE.Str
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.json.JsonParser
 import net.liftweb.record.{Field, Record}
-import net.liftweb.util.{Box, Empty, Failure, FieldError, Full, Log}
+import net.liftweb.util.{FieldError, Log}
 
 import com.mongodb._
 import com.mongodb.util.{JSON, JSONParseException}

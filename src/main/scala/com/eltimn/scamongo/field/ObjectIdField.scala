@@ -16,9 +16,9 @@ package com.eltimn.scamongo.field
  * and limitations under the License.
  */
 
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.http.js.JE.Str
 import net.liftweb.record.{Field, Record}
-import net.liftweb.util.{Box, Empty, Failure, Full}
 
 import com.mongodb.{ObjectId, DBRef}
 

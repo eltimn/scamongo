@@ -22,11 +22,11 @@ import java.util.regex.Pattern
 import scala.collection.jcl.Conversions._
 import scala.collection.mutable.ListBuffer
 
+import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.json.Formats
 import net.liftweb.json.JsonAST.JObject
 import net.liftweb.record.{MetaRecord, Record}
 import net.liftweb.record.field._
-import net.liftweb.util.{Box, Empty, Full}
 
 import com.mongodb._
 import com.mongodb.util.JSON
