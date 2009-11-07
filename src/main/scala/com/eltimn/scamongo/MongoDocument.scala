@@ -71,11 +71,22 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 			}
 		)
 	}
+	
+	/**
+	* Find a single document by _id.
+	*/
+	def find(s: String): Option[BaseDocument] = ObjectId.isValid(s) match {
+		case true => find(new BasicDBObject("_id", new ObjectId(s)))
+		case false => find(new BasicDBObject("_id", s))
+	}
 
 	/**
 	* Find a single document by a qry using String, Any inputs
 	*/
-	def find(k: String, o: Any): Option[BaseDocument] = find(new BasicDBObject(k, o))
+	def find(k: String, v: Any): Option[BaseDocument] = find(new BasicDBObject(k, v match {
+		case s: String if (ObjectId.isValid(s)) => new ObjectId(s)
+		case _ => v
+	}))
 
 	/**
 	* Find a single document by a qry using a json value

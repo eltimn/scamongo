@@ -88,6 +88,7 @@ object RecordExamples extends Specification {
 			t.stringfield.value must_== tr.stringfield.value
 			t.timezonefield.value must_== tr.timezonefield.value
 			t.datetimefield.value must_== tr.datetimefield.value
+			
 			val p = RPerson.create(t.person.value)(TestRecord.formats)
 			p.name must_== per.name
 			p.age must_== per.age

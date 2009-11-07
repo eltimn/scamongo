@@ -5,7 +5,7 @@ class ScamongoProject(info: ProjectInfo) extends DefaultProject(info) {
 	
 	//override def compileOptions = super.compileOptions ++ Seq(Unchecked)
 
-	//val liftjson = "net.liftweb" % "lift-json" % "1.1-SNAPSHOT" % "compile->default"
+	val liftjson = "net.liftweb" % "lift-json" % "1.1-SNAPSHOT" % "compile->default"
 	val liftrecord = "net.liftweb" % "lift-record" % "1.1-SNAPSHOT" % "compile->default"
 
 	val junit = "junit" % "junit" % "4.5"

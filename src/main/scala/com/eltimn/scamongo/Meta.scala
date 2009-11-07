@@ -89,12 +89,12 @@ private[scamongo] object Meta {
 
     def mongotype_?(clazz: Class[_]) = mongotypes contains clazz
 
-    def mongotype2dbovalue(a: Any) = a match {
+    def mongotype2dbovalue(a: Any, formats: Formats) = a match {
     	case MongoRef(r, i) => new BasicDBObject("ref", r).append("id", i)
     	case dbref: DBRef => dbref
-    	case jo: JObject => JObjectParser.parse(jo) // Any JObject
+    	case jo: JObject => JObjectParser.parse(jo)(formats) // Any JObject
 			//case jo: JsonObject[Any] => JObjectParser.parse(jo.asJObject) // A case class that extends JsonObject
-			case m: Map[String, Any] => MapParser.parse(m)
+			case m: Map[String, Any] => MapParser.parse(m)(formats)
 			case oid: ObjectId => oid
     	case p: Pattern => p
     	case _ => error("not a mongotype " + a.asInstanceOf[AnyRef].getClass)

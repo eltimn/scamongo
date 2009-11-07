@@ -27,15 +27,15 @@ private[scamongo] object MapParser {
 	/*
 	* Parse a Map[String, Any] into a DBObject
 	*/
-	def parse(map: Map[String, Any]): DBObject = {
-		Parser.parse(map)
+	def parse(map: Map[String, Any])(implicit formats: Formats): DBObject = {
+		Parser.parse(map, formats)
   }
 
 	object Parser {
 	
 		import Meta.Reflection._
 
-		def parse(map: Map[String, Any]): DBObject = {
+		def parse(map: Map[String, Any], formats: Formats): DBObject = {
 
 			val dbo = BasicDBObjectBuilder.start
 
@@ -43,24 +43,24 @@ private[scamongo] object MapParser {
 				k => map(k).asInstanceOf[AnyRef] match {
 					case x if primitive_?(x.getClass) => dbo.add(k, x)
 					case x if datetype_?(x.getClass) => dbo.add(k, datetype2dbovalue(x))
-					case x if mongotype_?(x.getClass) => dbo.add(k, mongotype2dbovalue(x))
-					case m: Map[String, Any] => dbo.add(k, parse(m))
-					case l: List[Any] => dbo.add(k, parseList(l))
+					case x if mongotype_?(x.getClass) => dbo.add(k, mongotype2dbovalue(x, formats))
+					case m: Map[String, Any] => dbo.add(k, parse(m, formats))
+					case l: List[Any] => dbo.add(k, parseList(l, formats))
 					case o => dbo.add(k, o.toString)
 				}
 			}
 			dbo.get
 		}
 
-		private def parseList(list: List[Any]): DBObject = {
+		private def parseList(list: List[Any], formats: Formats): DBObject = {
 			val dbl = new BasicDBList
 
 			list.foreach { i => i.asInstanceOf[AnyRef] match {
 				case x if primitive_?(x.getClass) => dbl.add(x)
 				case x if datetype_?(x.getClass) => dbl.add(datetype2dbovalue(x))
-				case x if mongotype_?(x.getClass) => dbl.add(mongotype2dbovalue(x))
-				case m: Map[String, Any] => dbl.add(parse(m))
-				case l: List[Any] => dbl.add(parseList(l))
+				case x if mongotype_?(x.getClass) => dbl.add(mongotype2dbovalue(x, formats))
+				case m: Map[String, Any] => dbl.add(parse(m, formats))
+				case l: List[Any] => dbl.add(parseList(l, formats))
 				case o => dbl.add(o.toString)
 			}}
 			dbl

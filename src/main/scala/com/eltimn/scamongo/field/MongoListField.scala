@@ -83,7 +83,7 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 			case f =>	f.asInstanceOf[AnyRef] match {
 				case x if primitive_?(x.getClass) => dbl.add(x)
 				case x if datetype_?(x.getClass) => dbl.add(datetype2dbovalue(x))
-				case x if mongotype_?(x.getClass) => dbl.add(mongotype2dbovalue(x))
+				case x if mongotype_?(x.getClass) => dbl.add(mongotype2dbovalue(x, formats))
 				case o => dbl.add(o.toString)
 			}
 		}

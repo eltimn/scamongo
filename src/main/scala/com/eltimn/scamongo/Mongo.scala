@@ -20,7 +20,7 @@ import scala.collection.immutable.HashSet
 import scala.collection.mutable.{HashMap => MutableHashMap, ListBuffer}
 import scala.reflect.Manifest
 
-import net.liftweb.json.{DateFormat, DefaultFormats, Formats}
+import net.liftweb.json.Formats
 import net.liftweb.json.JsonAST.JObject
 
 import com.mongodb._
@@ -262,10 +262,30 @@ trait MongoMeta[BaseDocument] {
 
 	// override this to specify a MongoIdentifier for this MongoDocument type
   def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
-  
-  // override this for custom Formats (date)
-  def formats: Formats = DefaultFormats //.lossless
-	implicit lazy val _formats: Formats = formats
+	
+	import net.liftweb.json.{NoTypeHints, Serialization, ShortTypeHints, DefaultFormats} //.{read, write => swrite}
+	import net.liftweb.json.JsonAST.{JField, JString, JObject}
+/*
+  val hints = new ShortTypeHints(classOf[ObjectId] :: Nil) {
+    override def serialize: PartialFunction[Any, JObject] = {
+      case oid: ObjectId => JObject(JField("oid", JString(oid.toString)) :: Nil)
+    }
+
+    override def deserialize: PartialFunction[(String, JObject), Any] = {
+      case ("ObjectId", JObject(JField("oid", JString(s)) :: Nil)) => new ObjectId(s)
+    }
+  }
+*/
+  // override this for custom Formats
+  def formats: Formats = DefaultFormats.lossless
+  /*
+  def formats: Formats = new Formats {
+    val dateFormat = DefaultFormats.dateFormat
+    override val typeHints = hints
+  }
+  */
+  //def formats: Formats = Serialization.formats(hints)
+  implicit lazy val _formats: Formats = formats
 
   /*
 	* Count all documents
@@ -298,7 +318,10 @@ trait MongoMeta[BaseDocument] {
 	// delete a document
 	def delete(k: String, v: Any) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-			coll.remove(new BasicDBObject(k, v))
+			coll.remove(new BasicDBObject(k, v match {
+				case s: String if (ObjectId.isValid(s)) => new ObjectId(s)
+				case _ => v
+			}))
 		)
 	}
 
@@ -477,7 +500,7 @@ case object Upsert extends UpdateOption
 case object Apply extends UpdateOption
 
 /*
-* These traits provide lift-json related convienece methods for case classes
+* These traits provide lift-json related conveniece methods for case classes
 * and their companion objects
 */
 trait JsonObject[BaseDocument] {

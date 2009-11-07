@@ -334,8 +334,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 
 	/**
 	* Create a BasicDBObject from the field names and values.
-	* - Dates are stored using lift-json formatter in UTC time, eg:
-	*   yyyy-MM-dd'T'HH:mm:ss'Z'
 	* - MongoFieldFlavor types (List) are converted to DBObjects
 	*   using toDBObject
 	*/
@@ -356,7 +354,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 				case Full(field) => field.value.asInstanceOf[AnyRef] match {
 					case x if primitive_?(x.getClass) => dbo.add(f.name, x)
 					case x if datetype_?(x.getClass) => dbo.add(f.name, datetype2dbovalue(x))
-					case x if mongotype_?(x.getClass) => dbo.add(f.name, mongotype2dbovalue(x))
+					case x if mongotype_?(x.getClass) => dbo.add(f.name, mongotype2dbovalue(x, formats))
 					case o => dbo.add(f.name, o.toString)
 				}
 				case _ => //dbo.markAsPartialObject // so we know it's only partial

@@ -24,15 +24,15 @@ import net.liftweb.json.Formats
 import net.liftweb.json.JsonAST._
 //import net.liftweb.json.Meta.Reflection._
 
-import com.mongodb.{BasicDBObject, BasicDBList, DBObject}
+import com.mongodb.{BasicDBObject, BasicDBList, DBObject, ObjectId}
 
 object JObjectParser {
 
 	/*
 	* Parse a JObject into a DBObject
 	*/
-	def parse(jo: JObject): DBObject = {
-		Parser.parse(jo)
+	def parse(jo: JObject)(implicit formats: Formats): DBObject = {
+		Parser.parse(jo, formats)
   }
 
 	/*
@@ -45,6 +45,9 @@ object JObjectParser {
 		a.asInstanceOf[AnyRef] match {
 			case x if primitive_?(x.getClass) => primitive2jvalue(x)
 			case x if datetype_?(x.getClass) => datetype2jvalue(x)(formats)
+			//case x: ObjectId => JString("ObjectId(\""+x.toString+"\")")
+			//case x: ObjectId => JObject(List(JField("jsonClass", JString("ObjectId")), JField("oid", JString(x.toString))))
+			case x: ObjectId => JString(x.toString)
 			case x: java.util.ArrayList[_] => JArray(x.toList.map( x => serialize(x, formats)))
 			case x: Option[_] => serialize(x getOrElse JNothing, formats)
 			case x: DBObject =>
@@ -64,41 +67,57 @@ object JObjectParser {
 
 	object Parser {
 
-		def parse(jo: JObject): DBObject = {
-			parseObject(jo.obj)
+		def parse(jo: JObject, formats: Formats): DBObject = {
+			parseObject(jo.obj, formats)
 		}
 
-		private def parseArray(arr: List[JValue]): BasicDBList = {
+		private def parseArray(arr: List[JValue], formats: Formats): BasicDBList = {
 			val dbl = new BasicDBList
 			trimArr(arr).foreach { a =>
 				a match {
-					case JArray(arr) => dbl.add(parseArray(arr))
-					case JObject(jo) => dbl.add(parseObject(jo))
-					case jv: JValue => dbl.add(renderValue(jv))
+					case JArray(arr) => dbl.add(parseArray(arr, formats))
+					case JObject(jo) => dbl.add(parseObject(jo, formats))
+					case jv: JValue => dbl.add(renderValue(jv, formats))
 				}
 			}
 			dbl
 		}
 
-		private def parseObject(obj: List[JField]): BasicDBObject = {
+		private def parseObject(obj: List[JField], formats: Formats): BasicDBObject = {
 			val dbo = new BasicDBObject
 			trimObj(obj).foreach { jf =>
 				jf.value match {
-					case JArray(arr) => dbo.put(jf.name, parseArray(arr))
-					case JObject(jo) => dbo.put(jf.name, parseObject(jo))
-					case jv: JValue => dbo.put(jf.name, renderValue(jv))
+					case JArray(arr) => dbo.put(jf.name, parseArray(arr, formats))
+					//case JObject(jo) if (objectId_?(jo)) => dbo.put(jf.name, new ObjectId(jo.last.value.values.toString))
+					case JObject(jo) => dbo.put(jf.name, parseObject(jo, formats))
+					case jv: JValue => dbo.put(jf.name, renderValue(jv, formats))
 				}
 			}
 			dbo
 		}
+		/*
+		private def objectId_?(obj: List[JField]): Boolean = {
+			(obj.size, obj.first.name, obj.first.value) match {
+				case (2, "jsonClass", JString(s)) if (s == "ObjectId") => true
+				case _ => false
+			}
+		}
+		*/
 
-		private def renderValue(jv: JValue): Object = jv match {
+		private def renderValue(jv: JValue, formats: Formats): Object = jv match {
 		  case JBool(b) => java.lang.Boolean.valueOf(b)
 		  case JInt(n) => renderInteger(n)
 		  case JDouble(n) => new java.lang.Double(n)
 		  case JNull => null
 		  case JNothing => error("can't render 'nothing'")
 		  case JString(null) => "null"
+		  case JString(s) if (ObjectId.isValid(s)) => new ObjectId(s)
+		  /*
+		  case JString(s) => formats.dateFormat.parse(s) match {
+		  	case Some(d: Date) => d // match on Date formatted string
+		  	case _ => s
+		  }
+		  */
 		  case JString(s) => s
 		  case _ => "match error (renderValue): "+jv.getClass
 		}
