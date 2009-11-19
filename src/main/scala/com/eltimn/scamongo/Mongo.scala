@@ -83,7 +83,7 @@ object MongoDB {
   * Define and authenticate a Mongo db
   */
 	def defineDbAuth(name: MongoIdentifier, address: MongoAddress, username: String, password: String) {
-		if (!address.db.authenticate(username, password))
+		if (!address.db.authenticate(username, password.toCharArray))
 			throw new MongoException("Authorization failed: "+address.toString)
 
     dbs(name) = address
