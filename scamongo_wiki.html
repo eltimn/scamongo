@@ -517,34 +517,35 @@ Also see [[AdvancedOptions]]</pre>
 <div title="MainMenu" modifier="Tim Nelson" created="200910161653" modified="200910161845" changecount="2">
 <pre>[[Road Map]]</pre>
 </div>
-<div title="Road Map" modifier="Tim Nelson" created="200910161655" modified="200910161844" tags="todo" changecount="5">
-<pre>* Replace ListBuffers
-
-Record
-* String validators &amp; LocaleField.localeList
-* callbacks, before/after update, before/after insert
-* save, saved_?, runSafe, try-catch
-* Map serializer
-* ListField (Map serializer, JsonObjectListField)
-* saveSafe, updateSafe methods
-* useSession example
-* PasswordField
-* MapField (Map serializer)
-* OptionField (or Box)
-* CaseClassField
-* MongoRefField fetch
-
-Document
-* save, update safe. Return Option.
-
-General
+<div title="Road Map" modifier="TimNelson" created="200910161655" modified="200912071356" tags="todo" changecount="7">
+<pre>General
 * eval ?
 * query DSL: By, In, &gt;=, etc.
 * Boolean, ObjectId, Date, Map query examples 
 * master/slave, replication
 * MongoAuth example
 * Test all data types
-* Binary support (?)</pre>
+* Binary support
+* cursor to list
+
+Document
+* save, update strict. Return Option.
+
+Record
+* BoxField &amp; OptionField
+* String validators &amp; LocaleField.localeList
+* callbacks, before/after update, before/after insert
+* save, saved_?, runSafe, try-catch
+* Map serializer
+* ListField (Map serializer, JsonObjectListField)
+* saveStrict, updateStrict methods
+* useSession example
+* PasswordField
+* MapField (Map serializer)
+* CaseClassField
+* MongoRefField fetch
+
+</pre>
 </div>
 <div title="SiteSubtitle" modifier="Tim Nelson" created="200910161652" modified="200910161714" changecount="5">
 <pre>a Scala library for interfacing with MongoDB</pre>

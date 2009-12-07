@@ -1,4 +1,4 @@
-package com.eltimn.scamongo
+package com.eltimn.scamongo.field
 
 /*
  * Copyright 2009 Tim Nelson
@@ -29,7 +29,7 @@ import com.mongodb._
 import com.mongodb.util.JSON
 
 /**
- * List field. This version uses a Scala List
+ * List field.
 */
 class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerType)
 	extends Field[List[ListType], OwnerType] with MongoFieldFlavor[List[ListType]] {
@@ -155,16 +155,14 @@ class MongoJObjectListField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 
 /*
 * List of JsonObject case classes
-
 class MongoJsonObjectListField[OwnerType <: MongoRecord[OwnerType], CaseType <: JsonObjectMeta[CaseType]](rec: OwnerType, cas: CaseType)
 	extends MongoListField[OwnerType, CaseType](rec: OwnerType) {
 	
 	override def setFromDBObject(dbo: DBObject): Box[List[CaseType]] = {
 		implicit val formats = owner.meta.formats
-		val ret = new ListBuffer[CaseType]
-		for (k <- dbo.keySet.toArray) {
-			ret += cas.create(JObjectParser.serialize(dbo.get(k.toString)).asInstanceOf[JObject])
-		}
+		val ret = dbo.keySet.map(k => {
+			cas.create(JObjectParser.serialize(dbo.get(k.toString)).asInstanceOf[JObject])
+		})
 		Full(set(ret.toList))
 	}
 }

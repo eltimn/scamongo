@@ -58,21 +58,3 @@ class ObjectIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	def owner = rec
 }
 
-/*
-* Field for storing an ObjectId as a string
-class MongoStringIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
-	extends StringField[OwnerType](rec, 24) {
-	
-	override def defaultValue = ObjectId.get.toString
-	
-	override def setFromString(in: String): Box[String] = {
-		ObjectId.isValid(in) match {
-			case true => Full(set(in))
-			case false => Empty 
-		}
-	}
-
-	def getRef: MongoRef =
-		MongoRef(owner.meta.collectionName, value)
-}
-*/

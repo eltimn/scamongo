@@ -19,8 +19,6 @@ package com.eltimn.scamongo
 import java.util.{Calendar, Date, UUID}
 import java.util.regex.Pattern
 
-import scala.collection.mutable.ListBuffer
-
 import net.liftweb.common.{Box, Full}
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonDSL._
@@ -28,7 +26,7 @@ import net.liftweb.json.JsonAST.JObject
 import net.liftweb.record.field.{StringField => LStringField, LocaleField => LLocaleField, _}
 
 import org.specs.Specification
-import org.specs.runner.{Runner, JUnit}
+//import org.specs.runner.{Runner, JUnit}
 
 import com.mongodb._
 import com.mongodb.util.JSON

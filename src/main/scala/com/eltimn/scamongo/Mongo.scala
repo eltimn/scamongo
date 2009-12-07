@@ -17,7 +17,7 @@ package com.eltimn.scamongo
  */
 
 import scala.collection.immutable.HashSet
-import scala.collection.mutable.{HashMap => MutableHashMap, ListBuffer}
+import scala.collection.mutable.{HashMap => MutableHashMap}
 import scala.reflect.Manifest
 
 import net.liftweb.json.Formats
@@ -397,23 +397,6 @@ trait MongoMeta[BaseDocument] {
 			coll.ensureIndex(MapParser.parse(keys), name,
 				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
 			)
-		})
-	}
-
-	/**
-	* Find all rows using a DBObject query. Internal use only.
-	*/
-	def getCursor(qry: DBObject, sort: Option[DBObject], opts: FindOption*): DBCursor = {
-		val findOpts = opts.toList
-
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			val cur = coll.find(qry).limit(
-				findOpts.find(_.isInstanceOf[Limit]).map(x => x.value).getOrElse(0)
-			).skip(
-				findOpts.find(_.isInstanceOf[Skip]).map(x => x.value).getOrElse(0)
-			)
-			sort.foreach( s => cur.sort(s))
-			cur
 		})
 	}
 

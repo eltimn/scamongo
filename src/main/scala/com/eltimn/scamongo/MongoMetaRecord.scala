@@ -20,7 +20,6 @@ import java.util.Calendar
 import java.util.regex.Pattern
 
 import scala.collection.jcl.Conversions._
-import scala.collection.mutable.ListBuffer
 
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.json.Formats
@@ -146,34 +145,30 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	* Find all rows in this collection
 	*/
 	def findAll: List[BaseRecord] = {
-		val ret = new ListBuffer[BaseRecord]
-
+		/*
+		* The call to toArray retrieves all documents and puts them in memory.
+		*/
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			val cur = coll.find
-			while (cur.hasNext) {
-				createRecord(cur.next) match {
-					case Full(obj) => ret += obj
-					case _ =>
-				}
-			}
+			coll.find.toArray.map(dbo => createRecord(dbo)).filter(_.isDefined).map(x => x.open_!).toList
 		})
-		ret.toList
 	}
 
 	/**
 	* Find all rows using a DBObject query. Internal use only.
 	*/
 	private def findAll(qry: DBObject, sort: Option[DBObject], opts: FindOption*): List[BaseRecord] = {
-		val ret = new ListBuffer[BaseRecord]
-		val cur = getCursor(qry, sort, opts :_*)
+		val findOpts = opts.toList
 
-		while (cur.hasNext) {
-			createRecord(cur.next) match {
-				case Full(obj) => ret += obj
-				case _ =>
-			}
-		}
-		ret.toList
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
+			val cur = coll.find(qry).limit(
+				findOpts.find(_.isInstanceOf[Limit]).map(x => x.value).getOrElse(0)
+			).skip(
+				findOpts.find(_.isInstanceOf[Skip]).map(x => x.value).getOrElse(0)
+			)
+			sort.foreach( s => cur.sort(s))
+			// The call to toArray retrieves all documents and puts them in memory.
+			cur.toArray.map(dbo => createRecord(dbo)).filter(_.isDefined).map(x => x.open_!).toList
+		})
 	}
 
 	/**
@@ -289,6 +284,15 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 			update(qry, newbr, db, opts :_*)
 		})
 	}
+	
+	/*
+	* Update document with a JObject query in strict mode
+	
+	def updateStrict(qry: JObject, newbr: BaseRecord, opts: UpdateOption*): BaseRecord = {
+		MongoDB.use(mongoIdentifier) ( db => {
+			update(qry, newbr, db, opts :_*)
+		})
+	}*/
 
 	/*
 	* Update document with a Map query using the given Mongo instance
@@ -340,6 +344,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	private def toDBObject(inst: BaseRecord): DBObject = {
 
 		import Meta.Reflection._
+		import field.MongoFieldFlavor
 
 		val dbo = BasicDBObjectBuilder.start // use this so regex patterns can be stored.
 

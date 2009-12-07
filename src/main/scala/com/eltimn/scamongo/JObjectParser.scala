@@ -20,6 +20,7 @@ import scala.collection.jcl.Conversions._
 
 import java.util.Date
 
+import net.liftweb.common.Box
 import net.liftweb.json.Formats
 import net.liftweb.json.JsonAST._
 //import net.liftweb.json.Meta.Reflection._
@@ -50,6 +51,7 @@ object JObjectParser {
 			case x: ObjectId => JString(x.toString)
 			case x: java.util.ArrayList[_] => JArray(x.toList.map( x => serialize(x, formats)))
 			case x: Option[_] => serialize(x getOrElse JNothing, formats)
+			case x: Box[_] => serialize(x getOrElse JNothing, formats)
 			case x: DBObject =>
 				x.keySet.toArray.toList.map { f =>
 					JField(f.toString, serialize(x.get(f.toString), formats))

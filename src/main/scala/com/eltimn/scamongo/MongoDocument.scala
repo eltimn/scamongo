@@ -16,8 +16,6 @@ package com.eltimn.scamongo
  * and limitations under the License.
  */
 
-import scala.collection.mutable.ListBuffer
-
 import net.liftweb.json.JsonAST.JObject
 
 import com.mongodb._
@@ -37,7 +35,7 @@ trait MongoDocument[BaseDocument] extends JsonObject[BaseDocument] {
 	}
 
 	def save:BaseDocument = meta.save(this)
-	
+
 	def getRef: MongoRef = MongoRef(meta.collectionName, _id.toString)
 }
 
@@ -49,7 +47,7 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	def create(dbo: DBObject): BaseDocument = {
 		create(JObjectParser.serialize(dbo).asInstanceOf[JObject])
 	}
-	
+
 	/**
 	* Find a single document by _id object.
 	def find(a: Any): Option[BaseDocument] = a match {
@@ -71,7 +69,7 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 			}
 		)
 	}
-	
+
 	/**
 	* Find a single document by _id.
 	*/
@@ -97,28 +95,34 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	* Find all documents in this collection
 	*/
 	def findAll: List[BaseDocument] = {
-		val ret = new ListBuffer[BaseDocument]
+		import scala.collection.jcl.Conversions._
 
+		/*
+		* The call to toArray retrieves all documents and puts them in memory.
+		*/
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			val cur = coll.find
-			while (cur.hasNext) {
-				ret += create(cur.next)
-			}
+			coll.find.toArray.map(dbo => create(dbo)).toList
 		})
-		ret.toList
 	}
 
 	/**
-	* Find all documents using a DBObject query
+	* Find all documents using a DBObject query.
 	*/
-	def findAll(qry: DBObject, sort: Option[DBObject], opts: FindOption*): List[BaseDocument] = {
-		val ret = new ListBuffer[BaseDocument]
-		val cur = getCursor(qry, sort, opts :_*)
+	private def findAll(qry: DBObject, sort: Option[DBObject], opts: FindOption*): List[BaseDocument] = {
+		import scala.collection.jcl.Conversions._
 
-		while (cur.hasNext) {
-			ret += create(cur.next)
-		}
-		ret.toList
+		val findOpts = opts.toList
+
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
+			val cur = coll.find(qry).limit(
+				findOpts.find(_.isInstanceOf[Limit]).map(x => x.value).getOrElse(0)
+			).skip(
+				findOpts.find(_.isInstanceOf[Skip]).map(x => x.value).getOrElse(0)
+			)
+			sort.foreach( s => cur.sort(s))
+			// The call to toArray retrieves all documents and puts them in memory.
+			cur.toArray.map(dbo => create(dbo)).toList
+		})
 	}
 
 	/**
@@ -144,7 +148,7 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	*/
 	def findAll(qry: JObject, sort: JObject, opts: FindOption*): List[BaseDocument] =
 		findAll(JObjectParser.parse(qry), Some(JObjectParser.parse(sort)), opts :_*)
-		
+
 	/**
 	* Find all documents using a Map query
 	*/
@@ -160,19 +164,19 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/**
 	* Find all documents using a k, v query
 	*/
-	def findAll(k: String, o: Any, opts: FindOption*): List[BaseDocument] = 
+	def findAll(k: String, o: Any, opts: FindOption*): List[BaseDocument] =
 		findAll(new BasicDBObject(k, o), None, opts :_*)
 
 	/**
 	* Find all documents using a k, v query with JObject sort
 	*/
-	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseDocument] = 
+	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseDocument] =
 		findAll(new BasicDBObject(k, o), Some(JObjectParser.parse(sort)), opts :_*)
-		
+
 	/**
 	* Find all documents using a k, v query with Map sort
 	*/
-	def findAll(k: String, o: Any, sort: Map[String, Any], opts: FindOption*): List[BaseDocument] = 
+	def findAll(k: String, o: Any, sort: Map[String, Any], opts: FindOption*): List[BaseDocument] =
 		findAll(new BasicDBObject(k, o), Some(MapParser.parse(sort)), opts :_*)
 
 	/*

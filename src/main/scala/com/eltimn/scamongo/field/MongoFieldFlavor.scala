@@ -1,4 +1,4 @@
-package com.eltimn.scamongo
+package com.eltimn.scamongo.field
 
 /*
  * Copyright 2009 Tim Nelson
@@ -30,7 +30,7 @@ import com.mongodb._
 import com.mongodb.util.{JSON, JSONParseException}
 
 /**
- * Desribes common aspects related with Mongo fields
+ * Desribes common aspects related to Mongo fields
  */
 trait MongoFieldFlavor[MyType] {
 
