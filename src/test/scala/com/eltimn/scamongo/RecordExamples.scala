@@ -289,6 +289,13 @@ object RecordExamples extends Specification {
 		}
 
 	}
+	
+	"Map Example" in {
+		val md1 = MapDoc.createRecord
+		md1.stringmap.set(Map("h" -> "hola"))
+		
+		md1.save must_== md1
+	}
 
 
   doLast {
@@ -473,4 +480,13 @@ object JsonDoc extends JsonObjectMeta[JsonDoc]
 object CustomFormats extends DefaultFormats {
 	import java.text.SimpleDateFormat
 	override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+}
+
+class MapDoc extends MongoRecord[MapDoc] with MongoId[MapDoc] {
+	def meta = MapDoc
+	
+	object stringmap extends MongoMapField[MapDoc, String](this)
+}
+object MapDoc extends MapDoc with MongoMetaRecord[MapDoc] {
+	override def formats = DefaultFormats.lossless // adds .000
 }

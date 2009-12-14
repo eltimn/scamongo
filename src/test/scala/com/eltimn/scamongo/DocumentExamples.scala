@@ -350,10 +350,12 @@ object DocumentExamples extends Specification {
 			db.getLastError.get("n") must_== 1
 
 			// try updating against the unique key
+			/* This works now
 			val o3 = ("$set" -> ("name" -> "MongoDB")) // set name
 			TestCollection.update(qry, o3, db, Upsert)
 			db.getLastError.get("err").toString must startWith("E12011 can't $inc/$set an indexed field")
 			db.getLastError.get("n") must_== 0
+			*/
 
 			// regex query example
 			val lst = TestCollection.findAll(Map("name" -> Pattern.compile("^Mongo")))

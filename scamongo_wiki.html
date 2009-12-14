@@ -43,7 +43,7 @@ DAMAGE.
 <!--}}}-->
 
 <!--PRE-HEAD-END-->
-<title> Scamongo - a Scala library for interfacing with MongoDB </title>
+<title> Scamongo - a Scala library for MongoDB </title>
 <style id="styleArea" type="text/css">
 #saveTest {display:none;}
 #messageArea {display:none;}
@@ -511,47 +511,237 @@ Also see [[AdvancedOptions]]</pre>
 </div>
 <!--POST-SHADOWAREA-->
 <div id="storeArea">
-<div title="DefaultTiddlers" modifier="Tim Nelson" created="200910161653" modified="200910161844" changecount="2">
-<pre>[[Road Map]]</pre>
+<div title="DefaultTiddlers" modifier="TimNelson" created="200910161653" modified="200912071607" changecount="3">
+<pre>[[Intro]]</pre>
 </div>
-<div title="MainMenu" modifier="Tim Nelson" created="200910161653" modified="200910161845" changecount="2">
-<pre>[[Road Map]]</pre>
+<div title="Intro" modifier="TimNelson" created="200912071555" modified="200912071709" changecount="16">
+<pre>Scamongo is a library for [[MongoDB|http://www.mongodb.org/]] written in [[Scala|http://www.scala-lang.org/]]. It is made up of 3 related parts;
+
+[[scamongo-base]]: A set of classes that are used to handle connection management and some methods for using ~MongoDB.
+[[scamongo-document]]: This uses the excellent [[lift-json|http://github.com/dpp/liftweb/tree/master/lift-base/lift-json/]] library to allow the use of case classes for domain objects.
+[[scamongo-record]]: This is a back-end implementation of the [[lift-record|http://github.com/dpp/liftweb/tree/master/lift-persistence/lift-record/]] framework. This is meant to be used within a [[Lift|http://www.liftweb.net/]] web application.
+</pre>
 </div>
-<div title="Road Map" modifier="TimNelson" created="200910161655" modified="200912071356" tags="todo" changecount="7">
+<div title="MainMenu" modifier="TimNelson" created="200910161653" modified="200912071607" changecount="3">
+<pre>[[Intro]]
+[[Road Map]]</pre>
+</div>
+<div title="Road Map" modifier="TimNelson" created="200910161655" modified="200912071707" tags="todo" changecount="11">
 <pre>General
 * eval ?
 * query DSL: By, In, &gt;=, etc.
-* Boolean, ObjectId, Date, Map query examples 
+* Boolean, ~ObjectId, Date, Map query examples 
 * master/slave, replication
-* MongoAuth example
+* ~MongoAuth example
 * Test all data types
 * Binary support
-* cursor to list
+* cursor vs array
 
 Document
 * save, update strict. Return Option.
 
 Record
-* BoxField &amp; OptionField
-* String validators &amp; LocaleField.localeList
+* ~BoxField &amp; ~OptionField
+* String validators &amp; ~LocaleField.localeList
 * callbacks, before/after update, before/after insert
 * save, saved_?, runSafe, try-catch
 * Map serializer
-* ListField (Map serializer, JsonObjectListField)
+* ~ListField (Map serializer, ~JsonObjectListField)
 * saveStrict, updateStrict methods
 * useSession example
-* PasswordField
-* MapField (Map serializer)
-* CaseClassField
-* MongoRefField fetch
+* ~PasswordField
+* ~MapField (Map serializer)
+* ~CaseClassField
+* ~MongoRefField fetch
 
 </pre>
 </div>
-<div title="SiteSubtitle" modifier="Tim Nelson" created="200910161652" modified="200910161714" changecount="5">
-<pre>a Scala library for interfacing with MongoDB</pre>
+<div title="SiteSubtitle" modifier="TimNelson" created="200910161652" modified="200912071547" changecount="6">
+<pre>a Scala library for MongoDB</pre>
 </div>
 <div title="SiteTitle" modifier="Tim Nelson" created="200910161651" changecount="1">
 <pre>Scamongo</pre>
+</div>
+<div title="scamongo-base" modifier="TimNelson" created="200912071612" modified="200912071658" changecount="7">
+<pre>These classes are mostly used by the other library classes, but can be used directly if needed. See:
+src/test/scala/com/eltimn/scamongo/~DirectExamples.scala for more information.
+
+Define a default db:
+{{{
+MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost(&quot;localhost&quot;, 27017), &quot;test_direct&quot;))
+}}}
+Use the db:
+{{{
+MongoDB.use(DefaultMongoIdentifier) ( db =&gt; {
+  val doc = new BasicDBObject
+  doc.put(&quot;name&quot;, &quot;MongoDB&quot;)
+  doc.put(&quot;type&quot;, &quot;database&quot;)
+  doc.put(&quot;count&quot;, 1)
+  val coll = db.getCollection(&quot;testCollection&quot;)
+
+  // save the doc to the db
+  coll.save(doc)
+})
+}}}
+Use a collection:
+{{{
+MongoDB.useCollection(collectionName) ( coll =&gt; {
+  val doc = new BasicDBObject
+  doc.put(&quot;name&quot;, &quot;MongoDB&quot;)
+  doc.put(&quot;type&quot;, &quot;database&quot;)
+  doc.put(&quot;count&quot;, 1)
+  // save the doc to the db
+  coll.save(doc)
+})
+}}}
+Use a single thread for all operations:
+{{{
+MongoDB.useSession ( db =&gt; {
+  val coll = db.getCollection(&quot;testCollection&quot;)
+  val doc = new BasicDBObject
+  doc.put(&quot;name&quot;, &quot;MongoSession&quot;)
+  doc.put(&quot;type&quot;, &quot;db&quot;)
+  doc.put(&quot;count&quot;, 1)
+  coll.save(doc)
+  db.getLastError
+  ...
+})
+}}}</pre>
+</div>
+<div title="scamongo-document" modifier="TimNelson" created="200912071621" modified="200912071647" changecount="10">
+<pre>This library relies on the lift-json project, but it doesn't have any dependencies itself. See:
+src/test/scala/com/eltimn/scamongo/~DocumentExamples.scala for more information.
+
+Define domain objects:
+{{{
+case class Address(street: String, city: String)
+case class Child(name: String, age: Int, birthdate: Option[Date])
+
+case class Person(_id: String, name: String, age: Int, address: Address, children: List[Child])
+    extends MongoDocument[Person] {
+
+  def meta = Person
+}
+
+object Person extends MongoDocumentMeta[Person] {
+  override def mongoIdentifier = TestDBa
+  override def collectionName = &quot;mypersons&quot;	
+}
+}}}
+Create an instance:
+{{{
+def date(s: String) = Person.formats.dateFormat.parse(s).get
+val p = Person(
+  ObjectId.get.toString,
+  &quot;joe&quot;,
+  27,
+  Address(&quot;Bulevard&quot;, &quot;Helsinki&quot;),
+  List(Child(&quot;Mary&quot;, 5, Some(date(&quot;2004-09-04T18:06:22.000Z&quot;))), Child(&quot;Mazy&quot;, 3, None))
+)
+}}}
+Save it:
+{{{
+p.save
+}}}
+Retrieve it:
+{{{
+val pFromDb = Person.find(p._id)
+}}}
+Delete it:
+{{{
+p.delete
+}}}
+Queries are written using the lift-json DSL:
+{{{
+import net.liftweb.json.JsonDSL._
+
+Person.findAll((&quot;name&quot; -&gt; &quot;joe&quot;) ~ (&quot;age&quot; -&gt; 27))
+}}}
+You could also create your Mongo documents using the DSL:
+{{{
+val json = { &quot;name&quot;: &quot;joe&quot;,
+  &quot;children&quot;: [
+    {
+      &quot;name&quot;: &quot;Mary&quot;,
+      &quot;age&quot;: 5
+    },
+    {
+      &quot;name&quot;: &quot;Mazy&quot;,
+      &quot;age&quot;: 3
+    }
+  ]
+}
+MongoDB.useCollection(&quot;myCollection&quot;)( coll =&gt; {
+  coll.save(JObjectParser.parse(json))
+})
+}}}</pre>
+</div>
+<div title="scamongo-record" modifier="TimNelson" created="200912071658" modified="200912071705" changecount="5">
+<pre>See:
+src/test/scala/com/eltimn/scamongo/~RecordExamples.scala for more information.
+
+Define record classes:
+{{{
+class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
+  def meta = MainDoc
+
+  object name extends StringField(this, 12)
+  object cnt extends IntField(this)
+  object refdoc extends DBRefField[MainDoc, RefDoc](this, RefDoc)	
+  object refdocId extends ObjectIdField(this) {
+    def fetch = RefDoc.find(value)
+  }
+}
+object MainDoc extends MainDoc with MongoMetaRecord[MainDoc]
+
+class RefDoc extends MongoRecord[RefDoc] with MongoId[RefDoc] {
+	def meta = RefDoc
+}
+object RefDoc extends RefDoc with MongoMetaRecord[RefDoc]
+}}}
+Create records and save:
+{{{
+val ref1 = RefDoc.createRecord
+val ref2 = RefDoc.createRecord
+
+ref1.save
+ref2.save
+
+val refString1 = RefStringDoc.createRecord
+val refString2 = RefStringDoc.createRecord
+
+refString1.save
+refString2.save
+
+val md1 = MainDoc.createRecord
+val md2 = MainDoc.createRecord
+val md3 = MainDoc.createRecord
+val md4 = MainDoc.createRecord
+
+md1.name.set(&quot;md1&quot;)
+md2.name.set(&quot;md2&quot;)
+md3.name.set(&quot;md3&quot;)
+md4.name.set(&quot;md4&quot;)
+
+md1.refdoc.set(ref1.getRef)
+md2.refdoc.set(ref1.getRef)
+md3.refdoc.set(ref2.getRef)
+md4.refdoc.set(ref2.getRef)
+
+md1.refdocId.set(ref1.id)
+md2.refdocId.set(ref1.id)
+md3.refdocId.set(ref2.id)
+md4.refdocId.set(ref2.id)
+
+md1.save must_== md1
+md2.save must_== md2
+md3.save must_== md3
+md4.save must_== md4
+}}}
+Query:
+{{{
+val mdq1 = MainDoc.findAll((&quot;name&quot; -&gt; &quot;md1&quot;))
+}}}</pre>
 </div>
 </div>
 <!--POST-STOREAREA-->

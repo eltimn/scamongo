@@ -34,10 +34,8 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject}
 object DirectExamples extends Specification {
 
 	doFirst { 
-		// create a Mongo instance
-		val mongoHost = MongoHost("localhost", 27017)
 		// define the db
-		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(mongoHost, "test_direct"))
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost("localhost", 27017), "test_direct"))
 	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer
@@ -257,12 +255,14 @@ object DirectExamples extends Specification {
 			*/
 			db.getLastError.get("n") must_== 1
 
+			/* this works now
 			// try updating against the unique key			
 			val o3 = new BasicDBObject
 			o3.put("$set", new BasicDBObject("name", "MongoDB")) // set type
 			coll.update(qry, o3, true, false)
 			db.getLastError.get("err").toString must startWith("E12011 can't $inc/$set an indexed field")
 			db.getLastError.get("n") must_== 0
+			*/
 
 			// this update query won't find any docs to update
 			coll.update(new BasicDBObject("name", "None"), o2, false, false)
