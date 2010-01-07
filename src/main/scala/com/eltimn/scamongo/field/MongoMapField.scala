@@ -65,9 +65,8 @@ class MongoMapField[OwnerType <: MongoRecord[OwnerType], MapValueType](rec: Owne
 
   	implicit val formats = owner.meta.formats
 
-  	for (
-  		k <- value.keys
-  	) dbo.put(k.toString, value.getOrElse(k, ""))
+  	for (k <- value.keys)
+  		dbo.put(k.toString, value.getOrElse(k, ""))
 
 		dbo
   }
@@ -79,9 +78,8 @@ class MongoMapField[OwnerType <: MongoRecord[OwnerType], MapValueType](rec: Owne
 
 		var ret = Map[String, MapValueType]()
 
-		for (
-			k <- dbo.keySet
-		) ret += (k.toString -> dbo.get(k).asInstanceOf[MapValueType])
+		for (k <- dbo.keySet)
+			ret += (k.toString -> dbo.get(k).asInstanceOf[MapValueType])
 
 		Full(set(ret))
 	}
