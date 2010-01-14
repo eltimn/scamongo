@@ -409,8 +409,9 @@ trait MongoMeta[BaseDocument] {
 			qry,
 			newobj,
 			dboOpts.find(_ == Upsert).map(x => true).getOrElse(false),
-			dboOpts.find(_ == Apply).map(x => true).getOrElse(false)
+			dboOpts.find(_ == Multi).map(x => true).getOrElse(false)
 		)
+		new BasicDBObject
 	}
 
 	/*
@@ -480,7 +481,7 @@ case class Skip(value: Int) extends FindOption
 */
 abstract sealed class UpdateOption
 case object Upsert extends UpdateOption
-case object Apply extends UpdateOption
+case object Multi extends UpdateOption
 
 /*
 * These traits provide lift-json related conveniece methods for case classes

@@ -348,11 +348,6 @@ class TestRecord extends MongoRecord[TestRecord] {
 
 	// JObjectField
 	object person extends JObjectField(this)
-	
-	// case class field
-	object ccperson extends Field[RPerson, OwnerType] with MongoFieldFlavor[RPerson] {
-		
-	}
 
 	/* CaseClassField
 	object person2 extends CaseClassField[TestRecord, RPerson](this) {
