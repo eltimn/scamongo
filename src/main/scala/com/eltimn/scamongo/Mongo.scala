@@ -37,7 +37,7 @@ case object DefaultMongoIdentifier extends MongoIdentifier {
 */
 case class MongoAddress(host: MongoHost, name: String) {
 	def db = host.mongo.getDB(name)
-	
+
 	override def toString = host.host+":"+host.port+"/"+name
 }
 
@@ -78,7 +78,7 @@ object MongoDB {
 	def defineDb(name: MongoIdentifier, address: MongoAddress) {
     dbs(name) = address
   }
-  
+
   /*
   * Define and authenticate a Mongo db
   */
@@ -88,7 +88,7 @@ object MongoDB {
 
     dbs(name) = address
   }
-  
+
   /*
   * Get a DB reference
   */
@@ -96,10 +96,10 @@ object MongoDB {
   	case Some(ma: MongoAddress) => Some(ma.db)
   	case _ => None
   }
-  
+
   /*
 	* Get the Mongo instance based on a MongoIdentifier
-	
+
   private def getMongo(name: MongoIdentifier): Option[Mongo] = dbs.get(name) match {
   	case Some(ma: MongoAddress) => Some(ma.host.mongo)
   	case _ => None
@@ -138,7 +138,7 @@ object MongoDB {
 
 		f(db)
   }
-  
+
   /**
   * Executes function {@code f} with the mongo named {@code name} and collection names {@code collectionName}.
   * Gets a collection for you.
@@ -151,7 +151,7 @@ object MongoDB {
 
 		f(coll)
   }
-  
+
   /**
   * Same as above except uses DefaultMongoIdentifier
 	*/
@@ -187,7 +187,7 @@ object MongoDB {
       db.requestDone
     }
   }
-  
+
   /**
   * Same as above except uses DefaultMongoIdentifier
   */
@@ -262,7 +262,7 @@ trait MongoMeta[BaseDocument] {
 
 	// override this to specify a MongoIdentifier for this MongoDocument type
   def mongoIdentifier: MongoIdentifier = DefaultMongoIdentifier
-	
+
 	import net.liftweb.json.{NoTypeHints, Serialization, ShortTypeHints, DefaultFormats} //.{read, write => swrite}
 	import net.liftweb.json.JsonAST.{JField, JString, JObject}
 /*
@@ -434,7 +434,7 @@ trait MongoMeta[BaseDocument] {
 			update(qry, newobj, db, opts :_*)
 		})
 	}
-	
+
 	/*
 	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
 	*/
@@ -446,7 +446,7 @@ trait MongoMeta[BaseDocument] {
 			opts :_*
 		)
 	}
-	
+
 	/*
 	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
 	*/
