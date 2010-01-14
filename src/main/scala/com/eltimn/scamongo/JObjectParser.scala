@@ -61,7 +61,7 @@ object JObjectParser {
 			    case fields => JObject(fields)
 			  }
 			case x => {
-				println("match error (serialize): "+x.getClass)
+				println("match error (serialize): "+x.getClass+" "+x.toString)
 				JNothing
 			}
 		}

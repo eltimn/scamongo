@@ -403,7 +403,7 @@ trait MongoMeta[BaseDocument] {
 	/*
 	* Update document with a DBObject query using the given Mongo instance.
 	*/
-	def update(qry: DBObject, newobj: DBObject, db: DB, opts: UpdateOption*): DBObject = {
+	def update(qry: DBObject, newobj: DBObject, db: DB, opts: UpdateOption*) {
 		val dboOpts = opts.toList
 		db.getCollection(collectionName).update(
 			qry,
@@ -411,27 +411,25 @@ trait MongoMeta[BaseDocument] {
 			dboOpts.find(_ == Upsert).map(x => true).getOrElse(false),
 			dboOpts.find(_ == Multi).map(x => true).getOrElse(false)
 		)
-		new BasicDBObject
 	}
 
 	/*
 	* Update document with a JObject query using the given Mongo instance.
 	* For use with modifier operations $inc, $set, $push...
 	*/
-	def update(qry: JObject, newobj: JObject, db: DB, opts: UpdateOption*): JObject = {
-		// these updates return the modifier object, not the object that was updated.
-		JObjectParser.serialize(update(
+	def update(qry: JObject, newobj: JObject, db: DB, opts: UpdateOption*) {
+		update(
 			JObjectParser.parse(qry),
 			JObjectParser.parse(newobj),
 			db,
 			opts :_*
-		)).asInstanceOf[JObject]
+		)
 	}
 
 	/*
 	* Update document with a JObject query. For use with modifier operations $inc, $set, $push...
 	*/
-	def update(qry: JObject, newobj: JObject, opts: UpdateOption*): JObject = {
+	def update(qry: JObject, newobj: JObject, opts: UpdateOption*) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newobj, db, opts :_*)
 		})
@@ -440,8 +438,7 @@ trait MongoMeta[BaseDocument] {
 	/*
 	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
 	*/
-	def update(qry: Map[String, Any], newobj: Map[String, Any], db: DB, opts: UpdateOption*): DBObject = {
-		// these updates return the modifier object, not the object that was updated.
+	def update(qry: Map[String, Any], newobj: Map[String, Any], db: DB, opts: UpdateOption*) {
 		update(
 			MapParser.parse(qry),
 			MapParser.parse(newobj),
@@ -453,7 +450,7 @@ trait MongoMeta[BaseDocument] {
 	/*
 	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
 	*/
-	def update(qry: Map[String, Any], newobj: Map[String, Any], opts: UpdateOption*): DBObject = {
+	def update(qry: Map[String, Any], newobj: Map[String, Any], opts: UpdateOption*) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newobj, db, opts :_*)
 		})

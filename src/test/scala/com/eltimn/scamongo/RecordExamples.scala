@@ -205,14 +205,14 @@ object RecordExamples extends Specification {
 
 		// modifier operations $inc, $set, $push...
 		val o2 = (("$inc" -> ("cnt" -> 1)) ~ ("$set" -> ("name" -> "md1a")))
-		MainDoc.update(("name" -> "md1"), o2) must_== o2 // these updates return the o2 object that was passed in
-
+		MainDoc.update(("name" -> "md1"), o2)
 		// get the doc back from the db and compare
 		val mdq5 = MainDoc.find("_id", md1.id)
 		mdq5.isDefined must_== true
-		mdq5.map ( m =>
+		mdq5.map ( m => {
 			m.name.value must_== "md1a"
-		)
+			m.cnt.value must_== 1
+		})
 
 		// Upsert with Map query - this should add a new row
 		val md6 = MainDoc.createRecord

@@ -275,14 +275,14 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/*
 	* Update document with a JObject query using the given Mongo instance
 	*/
-	def update(qry: JObject, newbr: BaseRecord, db: DB, opts: UpdateOption*): BaseRecord = {
-		createRecord(update(JObjectParser.parse(qry), toDBObject(newbr), db, opts :_*)) openOr createRecord
+	def update(qry: JObject, newbr: BaseRecord, db: DB, opts: UpdateOption*) {
+		update(JObjectParser.parse(qry), toDBObject(newbr), db, opts :_*)
 	}
 
 	/*
 	* Update document with a JObject query
 	*/
-	def update(qry: JObject, newbr: BaseRecord, opts: UpdateOption*): BaseRecord = {
+	def update(qry: JObject, newbr: BaseRecord, opts: UpdateOption*) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newbr, db, opts :_*)
 		})
@@ -300,14 +300,14 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	/*
 	* Update document with a Map query using the given Mongo instance
 	*/
-	def update(qry: Map[String, Any], newbr: BaseRecord, db: DB, opts: UpdateOption*): BaseRecord = {
-		createRecord(update(MapParser.parse(qry), toDBObject(newbr), db, opts :_*)) openOr createRecord
+	def update(qry: Map[String, Any], newbr: BaseRecord, db: DB, opts: UpdateOption*) {
+		update(MapParser.parse(qry), toDBObject(newbr), db, opts :_*)
 	}
 
 	/*
 	* Update document with a Map query
 	*/
-	def update(qry: Map[String, Any], newbr: BaseRecord, opts: UpdateOption*): BaseRecord = {
+	def update(qry: Map[String, Any], newbr: BaseRecord, opts: UpdateOption*) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newbr, db, opts :_*)
 		})

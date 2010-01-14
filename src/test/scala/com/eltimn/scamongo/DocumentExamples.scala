@@ -67,7 +67,6 @@ object DocumentExamples extends Specification {
 		def pFromDb = SimplePerson.find("_id", pid)
 
 		pFromDb.isDefined must_== true
-
 		p mustEqual pFromDb.get
 
 		// retrieve it using a Json query
@@ -81,10 +80,8 @@ object DocumentExamples extends Specification {
 		// with scala 2.8 you can use the copy function to do this
 		// val p3 = p.copy(name = "Tim3")
 		val p2 = SimplePerson(p._id, "Timm", 27)
-		p2.save must_== p2
-
+		p2.save
 		pFromDb.isDefined must_== true
-
 		p2 must_== pFromDb.get
 		p2.name must_== pFromDb.get.name
 
@@ -153,11 +150,10 @@ object DocumentExamples extends Specification {
 			p2FromDb.isEmpty must_== true
 			p3FromDb.isEmpty must_== true
 		}
-
   }
 
   "Person example" in {
-  
+
   	def date(s: String) = Person.formats.dateFormat.parse(s).get
 
 		// create a new Person UUID.randomUUID.toString
@@ -174,7 +170,7 @@ object DocumentExamples extends Specification {
 		pFromDb.isDefined must_== true
 
 		p must_== pFromDb.get
-		
+
 		Person.count must_== 1
 
 		if (!debug) {
@@ -182,7 +178,7 @@ object DocumentExamples extends Specification {
 			p.delete
 
 			pFromDb.isEmpty must_== true
-		}		
+		}
   }
 
   "Mongo tutorial example" in {
@@ -208,12 +204,10 @@ object DocumentExamples extends Specification {
 		// update
 		val tc3 = TestCollection(tc._id, "MongoDB", "document", 2, info) // the new object to update with, replaces the entire document, except possibly _id
 		val q = ("name" -> "MongoDB") // the query to select the document(s) to update
-		TestCollection.update(q, tc3) must_== tc3 // update returns the new object that was passed in
-
-		// get the doc back from the db and compare
+		TestCollection.update(q, tc3)
 		tcFromDb.isDefined must_== true
 		tcFromDb.get must_== tc3
-		
+
 		// Upsert - this should add a new row
 		val tc4 = TestCollection(ObjectId.get.toString, "nothing", "document", 1, info)
 		TestCollection.update(("name" -> "nothing"), tc4, Upsert)
@@ -221,9 +215,7 @@ object DocumentExamples extends Specification {
 
 		// modifier operations $inc, $set, $push...
 		val o2 = (("$inc" -> ("count" -> 1)) ~ ("$set" -> ("dbtype" -> "docdb")))
-		TestCollection.update(q, o2) must_== o2 // these updates return the o2 object that was passed in
-
-		// get the doc back from the db and compare
+		TestCollection.update(q, o2)
 		tcFromDb.isDefined must_== true
 		tcFromDb.get must_== TestCollection(tc._id, tc.name, "docdb", 3, info)
 
@@ -233,12 +225,14 @@ object DocumentExamples extends Specification {
 		TestCollection.update(("name" -> "nothing"), o3)
 		TestCollection.findAll.length must_== 3
 
+
+
 		if (!debug) {
 			// delete them
 			tc.delete
 			tc2.delete
 			tc4.delete
-			
+
 			TestCollection.findAll.size must_== 0
 		}
 
@@ -373,11 +367,11 @@ object DocumentExamples extends Specification {
 
 		})
   }
-  
+
   "Primitives example" in {
-  
+
   	def date(s: String) = Primitive.formats.dateFormat.parse(s).get
-  	
+
   	val p = Primitive(ObjectId.get.toString, 2147483647, 2147483648L, 1797693, 3.4028235F, 1000, 0, true, 512, date("2004-09-04T18:06:22.000Z"))
 
 		// save it
@@ -397,24 +391,24 @@ object DocumentExamples extends Specification {
 			pFromDb.isEmpty must_== true
 		}
 	}
-	
+
 	"Ref example" in {
 
   	val ref1 = RefJDoc(ObjectId.get.toString)
   	val ref2 = RefJDoc(ObjectId.get.toString)
 
-  	ref1.save must_== ref1
-  	ref2.save must_== ref2
+  	ref1.save
+  	ref2.save
 
   	val md1 = MainJDoc(ObjectId.get.toString, "md1", ref1.getRef)
   	val md2 = MainJDoc(ObjectId.get.toString, "md2", ref1.getRef)
   	val md3 = MainJDoc(ObjectId.get.toString, "md3", ref2.getRef)
   	val md4 = MainJDoc(ObjectId.get.toString, "md4", ref2.getRef)
 
-  	md1.save must_== md1
-  	md2.save must_== md2
-  	md3.save must_== md3
-  	md4.save must_== md4
+  	md1.save
+  	md2.save
+  	md3.save
+  	md4.save
 
   	MainJDoc.count must_== 4
   	RefJDoc.count must_== 2
@@ -459,7 +453,7 @@ object DocumentExamples extends Specification {
 			Primitive.drop
 			MainJDoc.drop
   		RefJDoc.drop
-  		
+
   		// drop the databases
   		MongoDB.use {
   			db => db.dropDatabase
@@ -500,8 +494,8 @@ case class Person(_id: String, name: String, age: Int, address: Address, childre
 object Person extends MongoDocumentMeta[Person] {
 	override def mongoIdentifier = TestDBa
 	override def collectionName = "mypersons"
-	
-	
+
+
 }
 
 // Mongo tutorial classes

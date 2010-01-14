@@ -34,7 +34,7 @@ trait MongoDocument[BaseDocument] extends JsonObject[BaseDocument] {
 		meta.delete("_id", _id)
 	}
 
-	def save:BaseDocument = meta.save(this)
+	def save = meta.save(this)
 
 	def getRef: MongoRef = MongoRef(meta.collectionName, _id.toString)
 }
@@ -182,7 +182,7 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/*
 	* Save a document to the db
 	*/
-	def save(in: BaseDocument): BaseDocument = {
+	def save(in: BaseDocument) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			save(in, db)
 		})
@@ -191,21 +191,21 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	/*
 	* Save a document to the db using the given Mongo instance
 	*/
-	def save(in: BaseDocument, db: DB): BaseDocument = {
-		create(db.getCollection(collectionName).save(JObjectParser.parse(toJObject(in))))
+	def save(in: BaseDocument, db: DB) {
+		db.getCollection(collectionName).save(JObjectParser.parse(toJObject(in)))
 	}
 
 	/*
 	* Update document with a JObject query using the given Mongo instance
 	*/
-	def update(qry: JObject, newbd: BaseDocument, db: DB, opts: UpdateOption*): BaseDocument = {
-		create(update(qry, toJObject(newbd), db, opts :_*))
+	def update(qry: JObject, newbd: BaseDocument, db: DB, opts: UpdateOption*) {
+		update(qry, toJObject(newbd), db, opts :_*)
 	}
 
 	/*
 	* Update document with a JObject query
 	*/
-	def update(qry: JObject, newbd: BaseDocument, opts: UpdateOption*): BaseDocument = {
+	def update(qry: JObject, newbd: BaseDocument, opts: UpdateOption*) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newbd, db, opts :_*)
 		})
