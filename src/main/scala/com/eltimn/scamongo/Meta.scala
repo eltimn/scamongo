@@ -35,7 +35,7 @@ private[scamongo] object Meta {
 		* These don't require a conversion and can be put directly into a DBObject
 		*/
     val primitives = Set[Class[_]](classOf[String], classOf[Int], classOf[Long], classOf[Double],
-                                   classOf[Float], classOf[Byte], classOf[BigInt], classOf[Boolean],
+                                   classOf[Float], classOf[Byte], classOf[BigDecimal], classOf[BigInt], classOf[Boolean],
                                    classOf[Short], classOf[java.lang.Integer], classOf[java.lang.Long],
                                    classOf[java.lang.Double], classOf[java.lang.Float],
                                    classOf[java.lang.Byte], classOf[java.lang.Boolean],
@@ -53,6 +53,7 @@ private[scamongo] object Meta {
       case x: Float => JDouble(x)
       case x: Byte => JInt(BigInt(x))
       case x: BigInt => JInt(x)
+      case x: BigDecimal => JString(x.toString) // this keeps the scale intact
       case x: Boolean => JBool(x)
       case x: Short => JInt(BigInt(x))
     	case x: String => JString(x)

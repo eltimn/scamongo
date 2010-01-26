@@ -1,0 +1,37 @@
+See wiki for project info.
+
+To build you must use sbt 
+http://code.google.com/p/simple-build-tool/
+
+Jar is available at:
+http://dl.dropbox.com/u/1154284/scamongo-0.1.jar
+
+
+Todo/Notes
+
+General
+* eval ?
+* query DSL: By, In, >=, etc.
+* Boolean, ~ObjectId, Date, Map query examples 
+* master/slave, replication
+* ~MongoAuth example
+* Test all data types
+* Binary support
+* cursor vs array
+
+Document
+* save, update strict. Return Option.
+
+Record
+* ~BoxField & ~OptionField
+* String validators & ~LocaleField.localeList
+* callbacks, before/after update, before/after insert
+* save, saved_?, runSafe, try-catch
+* Map serializer
+* ~ListField (Map serializer, ~JsonObjectListField)
+* saveStrict, updateStrict methods
+* useSession example
+* ~PasswordField
+* ~MapField (Map serializer)
+* ~CaseClassField
+* ~MongoRefField fetch
