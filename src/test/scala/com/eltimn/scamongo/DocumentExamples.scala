@@ -400,10 +400,10 @@ object DocumentExamples extends Specification {
   	ref1.save
   	ref2.save
 
-  	val md1 = MainJDoc(ObjectId.get.toString, "md1", ref1.getRef)
-  	val md2 = MainJDoc(ObjectId.get.toString, "md2", ref1.getRef)
-  	val md3 = MainJDoc(ObjectId.get.toString, "md3", ref2.getRef)
-  	val md4 = MainJDoc(ObjectId.get.toString, "md4", ref2.getRef)
+  	val md1 = MainJDoc(ObjectId.get.toString, "md1", ref1.getRef, Some(ref1._id))
+  	val md2 = MainJDoc(ObjectId.get.toString, "md2", ref1.getRef, None)
+  	val md3 = MainJDoc(ObjectId.get.toString, "md3", ref2.getRef, None)
+  	val md4 = MainJDoc(ObjectId.get.toString, "md4", ref2.getRef, None)
 
   	md1.save
   	md2.save
@@ -546,7 +546,7 @@ case class Primitive(
 
 object Primitive extends MongoDocumentMeta[Primitive]
 
-case class MainJDoc(_id: String, name: String, refdoc: MongoRef) extends MongoDocument[MainJDoc] {
+case class MainJDoc(_id: String, name: String, refdoc: MongoRef, refId: Option[String]) extends MongoDocument[MainJDoc] {
 
 	def meta = MainJDoc
 }
