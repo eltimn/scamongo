@@ -43,8 +43,7 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	/**
 	* Save the instance and return the instance
 	*/
-	def save(): MyType = {
-
+	def save: MyType = {
 		runSafe {
 			meta.save(this)
 		}

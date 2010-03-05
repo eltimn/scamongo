@@ -73,9 +73,9 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	}
 
 	/**
-	* Find a single row by a qry, using a DBObject. For internal use only.
+	* Find a single row by a qry, using a DBObject.
 	*/
-	private def find(qry: DBObject): Box[BaseRecord] = {
+	def find(qry: DBObject): Box[BaseRecord] = {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
 			coll.findOne(qry) match {
 				case null => Empty
@@ -88,20 +88,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	* Find a single row by id
 	*/
 	//def find(a: Any): Box[BaseRecord] = find(new BasicDBObject("_id", a))
-
-	/**
-	* Find a single row by a qry, using a Map
-
-	def find(qrymap: Map[String,String]): Box[BaseRecord] = {
-		// convert map to DBObject
-		val qry = new BasicDBObject()
-
-		for (k <- qrymap.keys) {
-			qry.put(k.toString, qrymap(k.toString))
-		}
-
-		find(qry)
-	}*/
 
 	/**
 	* Find a single row by an ObjectId
@@ -133,11 +119,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	* Find a single document by a qry using a json value
 	*/
 	def find(json: JObject): Box[BaseRecord] = find(JObjectParser.parse(json))
-
-	/**
-	* Find a single document by a qry using a Map
-	*/
-	def find(map: Map[String, Any]): Box[BaseRecord] = find(MapParser.parse(map))
 
 	/**
 	* Find a single row by a qry using String key and Any value
@@ -200,19 +181,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		findAll(JObjectParser.parse(qry), Some(JObjectParser.parse(sort)), opts :_*)
 
 	/**
-	* Find all documents using a Map query
-	*/
-	def findAll(qry: Map[String, Any], opts: FindOption*): List[BaseRecord] = {
-		findAll(MapParser.parse(qry), None, opts :_*)
-	}
-
-	/**
-	* Find all documents using a Map query with sort
-	*/
-	def findAll(qry: Map[String, Any], sort: Map[String, Any], opts: FindOption*): List[BaseRecord] =
-		findAll(MapParser.parse(qry), Some(MapParser.parse(sort)), opts :_*)
-
-	/**
 	* Find all documents using a k, v query
 	*/
 	def findAll(k: String, o: Any, opts: FindOption*): List[BaseRecord] =
@@ -223,12 +191,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	*/
 	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseRecord] =
 		findAll(new BasicDBObject(k, o), Some(JObjectParser.parse(sort)), opts :_*)
-
-	/**
-	* Find all documents using a k, v query with Map sort
-	*/
-	def findAll(k: String, o: Any, sort: Map[String, Any], opts: FindOption*): List[BaseRecord] =
-		findAll(new BasicDBObject(k, o), Some(MapParser.parse(sort)), opts :_*)
 
 	/**
 	* Save the instance in the appropriate backing store
@@ -297,21 +259,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		})
 	}*/
 
-	/*
-	* Update document with a Map query using the given Mongo instance
-	*/
-	def update(qry: Map[String, Any], newbr: BaseRecord, db: DB, opts: UpdateOption*) {
-		update(MapParser.parse(qry), toDBObject(newbr), db, opts :_*)
-	}
-
-	/*
-	* Update document with a Map query
-	*/
-	def update(qry: Map[String, Any], newbr: BaseRecord, opts: UpdateOption*) {
-		MongoDB.use(mongoIdentifier) ( db => {
-			update(qry, newbr, db, opts :_*)
-		})
-	}
 
 	/**
 	* Populate the inst's fields with the values from a DBObject. Values are set

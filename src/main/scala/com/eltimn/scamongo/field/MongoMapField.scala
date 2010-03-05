@@ -1,7 +1,7 @@
 package com.eltimn.scamongo.field
 
 /*
- * Copyright 2009 Tim Nelson
+ * Copyright 2010 Tim Nelson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,8 +62,6 @@ class MongoMapField[OwnerType <: MongoRecord[OwnerType], MapValueType](rec: Owne
 	*/
   def asDBObject: DBObject = {
   	val dbo = new BasicDBObject
-
-  	implicit val formats = owner.meta.formats
 
   	for (k <- value.keys)
   		dbo.put(k.toString, value.getOrElse(k, ""))

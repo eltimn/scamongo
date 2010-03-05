@@ -173,7 +173,7 @@ object RecordExamples extends Specification {
 		md1b.foreach(o => o.id must_== md1.id)
 
 		// query for a single doc with a Map query
-		val md1c = MainDoc.find(Map("name"-> "md1"))
+		val md1c = MainDoc.find(("name" -> "md1"))
 		md1c.isDefined must_== true
 		md1c.foreach(o => o.id must_== md1.id)
 
@@ -186,8 +186,8 @@ object RecordExamples extends Specification {
 		mdq1.size must_== 1
 
 		// find all documents with $in query, sorted
-		val qry = Map("name" -> Map("$in" -> List("md1", "md2")))
-		val mdq2 = MainDoc.findAll(qry, Map("name" -> -1))
+		val qry = ("name" -> ("$in" -> List("md1", "md2")))
+		val mdq2 = MainDoc.findAll(qry, ("name" -> -1))
 		mdq2.size must_== 2
 		mdq2.first.id must_== md2.id
 
@@ -219,7 +219,7 @@ object RecordExamples extends Specification {
 		md6.name.set("md6")
 		md6.refdoc.set(ref1.getRef)
 		md6.refstringdoc.set(refString1.getRef)
-		MainDoc.update(Map("name" -> "nothing"), md6, Upsert)
+		MainDoc.update(("name" -> "nothing"), md6, Upsert)
 		MainDoc.findAll.size must_== 6
 
 		if (!debug) {
@@ -437,20 +437,7 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 	object calendarlist extends MongoListField[ListDoc, Calendar](this)
 	object patternlist extends MongoListField[ListDoc, Pattern](this)
 	object dbreflist extends MongoListField[ListDoc, DBRef](this)
-	object maplist extends MongoListField[ListDoc, Map[String, Any]](this) {
-		override def setFromDBObject(dbo: DBObject): Box[List[Map[String, Any]]] = {
-			val lst: List[Map[String, Any]] =
-				dbo.keySet.map(k => {
-					dbo.get(k.toString) match {
-						case bdbo: BasicDBObject if (bdbo.containsField("name") && bdbo.containsField("type")) =>
-							Map("name"-> bdbo.get("name"), "type" -> bdbo.get("type"))
-						case _ => null
-					}
-				}).toList.filter(_ != null)
-			Full(set(lst))
-		}
-	}
-
+	
 	// specialized list types
 	object jobjlist extends MongoJObjectListField(this)
 	object datelist	extends MongoDateListField(this)
@@ -467,6 +454,39 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 			Full(set(lst))
 		}
 	}
+	
+	object maplist extends MongoListField[ListDoc, Map[String, String]](this) {
+		override def asDBObject: DBObject = {
+			val dbl = new BasicDBList
+
+			value.foreach {
+				m => {
+					val dbo = new BasicDBObject
+					
+					m.keys.foreach(k => {
+						dbo.put(k.toString, m.getOrElse(k, ""))
+					})
+					
+					dbl.add(dbo)
+				}
+			}
+
+			dbl
+		}
+
+		override def setFromDBObject(dbo: DBObject): Box[List[Map[String, String]]] = {
+			val lst: List[Map[String, String]] =
+				dbo.keySet.map(k => {
+					dbo.get(k.toString) match {
+						case bdbo: BasicDBObject if (bdbo.containsField("name") && bdbo.containsField("type")) =>
+							Map("name"-> bdbo.getString("name"), "type" -> bdbo.getString("type"))
+						case _ => null
+					}
+				}).toList.filter(_ != null)
+			Full(set(lst))
+		}
+	}
+
 }
 object ListDoc extends ListDoc with MongoMetaRecord[ListDoc] {
 	override def formats = DefaultFormats.lossless // adds .000

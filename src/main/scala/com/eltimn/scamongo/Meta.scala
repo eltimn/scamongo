@@ -53,7 +53,7 @@ private[scamongo] object Meta {
       case x: Float => JDouble(x)
       case x: Byte => JInt(BigInt(x))
       case x: BigInt => JInt(x)
-      case x: BigDecimal => JString(x.toString) // this keeps the scale intact
+      //case x: BigDecimal => JString(x.toString) // this keeps the scale intact
       case x: Boolean => JBool(x)
       case x: Short => JInt(BigInt(x))
     	case x: String => JString(x)
@@ -95,7 +95,7 @@ private[scamongo] object Meta {
     	case dbref: DBRef => dbref
     	case jo: JObject => JObjectParser.parse(jo)(formats) // Any JObject
 			//case jo: JsonObject[Any] => JObjectParser.parse(jo.asJObject) // A case class that extends JsonObject
-			case m: Map[String, Any] => MapParser.parse(m)(formats)
+			//case m: Map[String, Any] => MapParser.parse(m)(formats)
 			case oid: ObjectId => oid
     	case p: Pattern => p
     	case _ => error("not a mongotype " + a.asInstanceOf[AnyRef].getClass)

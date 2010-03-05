@@ -150,18 +150,6 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 		findAll(JObjectParser.parse(qry), Some(JObjectParser.parse(sort)), opts :_*)
 
 	/**
-	* Find all documents using a Map query
-	*/
-	def findAll(qry: Map[String, Any], opts: FindOption*): List[BaseDocument] =
-		findAll(MapParser.parse(qry), None, opts :_*)
-
-	/**
-	* Find all documents using a Map query with sort
-	*/
-	def findAll(qry: Map[String, Any], sort: Map[String, Any], opts: FindOption*): List[BaseDocument] =
-		findAll(MapParser.parse(qry), Some(MapParser.parse(sort)), opts :_*)
-
-	/**
 	* Find all documents using a k, v query
 	*/
 	def findAll(k: String, o: Any, opts: FindOption*): List[BaseDocument] =
@@ -172,12 +160,6 @@ trait MongoDocumentMeta[BaseDocument] extends JsonObjectMeta[BaseDocument] with 
 	*/
 	def findAll(k: String, o: Any, sort: JObject, opts: FindOption*): List[BaseDocument] =
 		findAll(new BasicDBObject(k, o), Some(JObjectParser.parse(sort)), opts :_*)
-
-	/**
-	* Find all documents using a k, v query with Map sort
-	*/
-	def findAll(k: String, o: Any, sort: Map[String, Any], opts: FindOption*): List[BaseDocument] =
-		findAll(new BasicDBObject(k, o), Some(MapParser.parse(sort)), opts :_*)
 
 	/*
 	* Save a document to the db

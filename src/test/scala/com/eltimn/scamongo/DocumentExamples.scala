@@ -352,11 +352,11 @@ object DocumentExamples extends Specification {
 			*/
 
 			// regex query example
-			val lst = TestCollection.findAll(Map("name" -> Pattern.compile("^Mongo")))
+			val lst = TestCollection.findAll(new BasicDBObject("name", Pattern.compile("^Mongo")))
 			lst.size must_== 2
 
 			// use regex and another clause
-			val lst2 = TestCollection.findAll(Map("name" -> Pattern.compile("^Mongo"), "count" -> 1))
+			val lst2 = TestCollection.findAll(new BasicDBObject("name", Pattern.compile("^Mongo")).append("count", 1))
 			lst2.size must_== 1
 
 			if (!debug) {

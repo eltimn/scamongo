@@ -79,7 +79,6 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 			case jo: JsonObject[Any] => dbl.add(JObjectParser.parse(jo.asJObject)) // A case class that extends JsonObject
 			//case jo: JObject => dbl.add(JObjectParser.parse(jo)) // Any JObject
 			case dbref: DBRef => dbl.add(dbref)
-			case m: Map[String, Any] => dbl.add(MapParser.parse(m))
 			case f =>	f.asInstanceOf[AnyRef] match {
 				case x if primitive_?(x.getClass) => dbl.add(x)
 				case x if datetype_?(x.getClass) => dbl.add(datetype2dbovalue(x))

@@ -310,11 +310,6 @@ trait MongoMeta[BaseDocument] {
 	*/
 	def count(qry: JObject):Long = count(JObjectParser.parse(qry))
 
-	/*
-	* Count documents by Map query
-	*/
-	def count(qry: Map[String, Any]):Long = count(MapParser.parse(qry))
-
 	// delete a document
 	def delete(k: String, v: Any) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
@@ -331,15 +326,6 @@ trait MongoMeta[BaseDocument] {
 	def delete(qry: JObject) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
 			coll.remove(JObjectParser.parse(qry))
-		)
-	}
-
-	/*
-	* Delete documents by a Map query
-	*/
-	def delete(qry: Map[String, Any]) {
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-			coll.remove(MapParser.parse(qry))
 		)
 	}
 
@@ -407,27 +393,6 @@ trait MongoMeta[BaseDocument] {
 	* Update document with a JObject query. For use with modifier operations $inc, $set, $push...
 	*/
 	def update(qry: JObject, newobj: JObject, opts: UpdateOption*) {
-		MongoDB.use(mongoIdentifier) ( db => {
-			update(qry, newobj, db, opts :_*)
-		})
-	}
-
-	/*
-	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
-	*/
-	def update(qry: Map[String, Any], newobj: Map[String, Any], db: DB, opts: UpdateOption*) {
-		update(
-			MapParser.parse(qry),
-			MapParser.parse(newobj),
-			db,
-			opts :_*
-		)
-	}
-
-	/*
-	* Update document with a Map query. For use with modifier operations $inc, $set, $push...
-	*/
-	def update(qry: Map[String, Any], newobj: Map[String, Any], opts: UpdateOption*) {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newobj, db, opts :_*)
 		})
