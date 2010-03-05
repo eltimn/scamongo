@@ -33,18 +33,24 @@ class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int
    * A validation helper.  Make sure the string is at least a particular
    * length and generate a validation issue if not
    */
-  def valMinLen(len: Int, msg: => String)(value: String): Box[Node] =
-    if ((value eq null) || value.length < len) Full(Text(msg))
-    else Empty
+  def valMinLen(len: Int, msg: => String)(valBox: Box[String]): Box[Node] =
+  	valBox.flatMap {
+  		s =>
+  			if ((s eq null) || s.length < len) Full(Text(msg))
+    		else Empty
+  	}
 
   /**
    * A validation helper.  Make sure the string is no more than a particular
    * length and generate a validation issue if not
    */
-  def valMaxLen(len: Int, msg: => String)(value: String): Box[Node] =
-    if ((value ne null) && value.length > len) Full(Text(msg))
-    else Empty
+  def valMaxLen(len: Int, msg: => String)(valBox: Box[String]): Box[Node] =
+  	valBox.flatMap {
+  		s =>
+				if ((value ne null) && value.length > len) Full(Text(msg))
+				else Empty
+		}
   
   // use maxLength
-  def valMaxLen(msg: => String)(value: String): Box[Node] = valMaxLen(maxLength, msg)(value)
+  def valMaxLen(msg: => String)(valBox: Box[String]): Box[Node] = valMaxLen(maxLength, msg)(valBox)
 }
