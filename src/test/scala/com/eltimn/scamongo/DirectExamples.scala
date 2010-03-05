@@ -213,7 +213,7 @@ object DirectExamples extends Specification {
 			val coll = db.getCollection("testCollection")
 
 			// create a unique index on name
-			coll.ensureIndex(new BasicDBObject("name", 1), false, true)
+			coll.ensureIndex(new BasicDBObject("name", 1), new BasicDBObject("unique", true))
 
 			// build the DBObjects
 			val doc = new BasicDBObject
@@ -228,7 +228,7 @@ object DirectExamples extends Specification {
 		  doc2.put("type", "db")
 		  doc2.put("count", 1)
 
-		  doc3.put("name", "MongoDB")
+		doc3.put("name", "MongoDB")
 		  doc3.put("type", "db")
 		  doc3.put("count", 1)
 

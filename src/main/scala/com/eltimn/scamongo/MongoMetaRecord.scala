@@ -45,7 +45,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	private def createRecord(dbo: DBObject): Box[BaseRecord] = {
 		val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
 		rec.runSafe {
-			introspect(rec, rec.getClass.getMethods) {case (v, mf) =>}
+			introspect(rec, rec.getClass.getMethods) {case (v, mf) => }
 		}
 		rec.fromDBObject(dbo) // convert to this using fromDBObject method
 	}
@@ -312,7 +312,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 			update(qry, newbr, db, opts :_*)
 		})
 	}
-
 
 	/**
 	* Populate the inst's fields with the values from a DBObject. Values are set

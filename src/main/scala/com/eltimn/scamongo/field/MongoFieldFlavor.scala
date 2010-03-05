@@ -30,13 +30,15 @@ import com.mongodb._
 import com.mongodb.util.{JSON, JSONParseException}
 
 /**
- * Desribes common aspects related to Mongo fields
+ * Describes common aspects related to Mongo fields
  */
 trait MongoFieldFlavor[MyType] {
 
 	import com.mongodb.util.JSON
 
-	// convert this field's value into a DBObject so it can be stored in Mongo.
+	/*
+	* convert this field's value into a DBObject so it can be stored in Mongo.
+	*/
   def asDBObject: DBObject
 
 	// set this field's value using a DBObject returned from Mongo.

@@ -480,6 +480,9 @@ case class SimplePerson(_id: String, name: String, age: Int) extends MongoDocume
 object SimplePerson extends MongoDocumentMeta[SimplePerson] {
 	override val collectionName = "simplepersons"
 	override def mongoIdentifier = DefaultMongoIdentifier
+	
+	// index name
+	ensureIndex(("name" -> 1))
 }
 
 case class Address(street: String, city: String)
@@ -509,9 +512,7 @@ case class TestCollection(_id: String, name: String, dbtype: String, count: Int,
 object TestCollection extends MongoDocumentMeta[TestCollection] {
 
 	// create a unique index on name
-	//ensureIndex(("name" -> 1), Unique)
-	ensureIndex(Map("name" -> 1), Unique)
-
+	ensureIndex(("name" -> 1), true)
 }
 
 case class IDoc(_id: String, i: Int) extends MongoDocument[IDoc] {
@@ -521,8 +522,8 @@ case class IDoc(_id: String, i: Int) extends MongoDocument[IDoc] {
 
 object IDoc extends MongoDocumentMeta[IDoc] {
 
-	// create an index on "i", descending with name and Force
-	ensureIndex(("i" -> -1), "i_ix1", Force)
+	// create an index on "i", descending with custom name
+	ensureIndex(("i" -> -1), ("name" -> "i_ix1"))
 }
 
 /*

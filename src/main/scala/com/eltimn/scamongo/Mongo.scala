@@ -351,52 +351,29 @@ trait MongoMeta[BaseDocument] {
 	}
 
 	/*
-	* Ensure an index exists using a JObject
+	* Ensure an index exists
 	*/
-	def ensureIndex(keys: JObject, opts: IndexOption*) {
-		val ixOpts = opts.toList
+	def ensureIndex(keys: JObject) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.ensureIndex(JObjectParser.parse(keys),
-				ixOpts.find(_ == Force).map(x => true).getOrElse(false),
-				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
-			)
+			coll.ensureIndex(JObjectParser.parse(keys))
+		})
+	}
+	
+	/*
+	* Ensure an index exists and make unique
+	*/
+	def ensureIndex(keys: JObject, unique: Boolean) {
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
+			coll.ensureIndex(JObjectParser.parse(keys), new BasicDBObject("unique", true))
 		})
 	}
 
 	/*
-	* Ensure an index exists using a JObject, giving it a name
+	* Ensure an index exists with options
 	*/
-	def ensureIndex(keys: JObject, name: String, opts: IndexOption*) {
-		val ixOpts = opts.toList
+	def ensureIndex(keys: JObject, opts: JObject) {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.ensureIndex(JObjectParser.parse(keys), name,
-				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
-			)
-		})
-	}
-
-	/*
-	* Ensure an index exists using a Map
-	*/
-	def ensureIndex(keys: Map[String, Any], opts: IndexOption*) {
-		val ixOpts = opts.toList
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.ensureIndex(MapParser.parse(keys),
-				ixOpts.find(_ == Force).map(x => true).getOrElse(false),
-				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
-			)
-		})
-	}
-
-	/*
-	* Ensure an index exists using a Map, giving it a name
-	*/
-	def ensureIndex(keys: Map[String, Any], name: String, opts: IndexOption*) {
-		val ixOpts = opts.toList
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.ensureIndex(MapParser.parse(keys), name,
-				ixOpts.find(_ == Unique).map(x => true).getOrElse(false)
-			)
+			coll.ensureIndex(JObjectParser.parse(keys), JObjectParser.parse(opts))
 		})
 	}
 
@@ -456,13 +433,6 @@ trait MongoMeta[BaseDocument] {
 		})
 	}
 }
-
-/*
-* For passing in options to the ensureIndex function
-*/
-abstract sealed class IndexOption
-case object Force extends IndexOption
-case object Unique extends IndexOption
 
 /*
 * For passing in options to the find function
