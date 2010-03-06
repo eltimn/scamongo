@@ -1,20 +1,38 @@
 See wiki for project info.
 
-To build you must use sbt 
+To build you will need to use sbt 
 http://code.google.com/p/simple-build-tool/
 
 Jar is available at:
 http://dl.dropbox.com/u/1154284/scamongo-0.1.jar
 http://dl.dropbox.com/u/1154284/scamongo-0.1.1.jar
 
-Todo/Notes
+hn. Release Notes
+
+*version-0.1.1*
+
+*Updated for use with mongo-java-driver 1.3 and lift 2.0-M3
+*Added support for optional_? fields [1] - If optional_? == true the field will not be included in the DBObject
+*Fixed StringField validators to align with new arg type [1]
+*Changed internals to align with Ross' fromOther and asOther paradigm [2]
+
+*Removed MapParser
+
+[1] http://groups.google.com/group/liftweb/browse_thread/thread/42183cb100176f1e/f916dce6a459fdd0?lnk=gst&q=record+option#f916dce6a459fdd0
+[2] http://groups.google.com/group/liftweb/browse_thread/thread/5c0735fc0d5f6250#
+
+*version-0.1*
+
+*First public release
+
+hn. Todo/Notes
 
 General
 * eval ?
 * query DSL: By, In, >=, etc.
-* Boolean, ~ObjectId, Date, Map query examples 
+* Boolean, ObjectId, Date, Map query examples 
 * master/slave, replication
-* ~MongoAuth example
+* MongoAuth example
 * Test all data types
 * Binary support
 * cursor vs array
@@ -23,15 +41,14 @@ Document
 * save, update strict. Return Option.
 
 Record
-* ~BoxField & ~OptionField
+* BoxField & OptionField
 * String validators & ~LocaleField.localeList
 * callbacks, before/after update, before/after insert
 * save, saved_?, runSafe, try-catch
 * Map serializer
-* ~ListField (Map serializer, ~JsonObjectListField)
+* ListField (JsonObjectListField)
 * saveStrict, updateStrict methods
 * useSession example
-* ~PasswordField
-* ~MapField (Map serializer)
-* ~CaseClassField
-* ~MongoRefField fetch
+* PasswordField
+* CaseClassField
+* MongoRefField fetch
