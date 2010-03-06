@@ -1,7 +1,7 @@
 package com.eltimn.scamongo.field
 
 /*
- * Copyright 2009 Tim Nelson
+ * Copyright 2010 Tim Nelson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,9 +32,9 @@ abstract class DBRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoR
 	extends Field[DBRef, OwnerType] {
 
 	/*
-	* fetch the referenced object
+	* get the referenced object
 	*/
-	def fetch = ref.meta.findAny(value.getId)
+	def obj = ref.meta.findAny(value.getId)
 
 	def asJs = Str(toString)
 

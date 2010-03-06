@@ -1,7 +1,7 @@
 package com.eltimn.scamongo
 
 /*
- * Copyright 2009 Tim Nelson
+ * Copyright 2010 Tim Nelson
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,30 +38,12 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	//def afterCommit: List[BaseRecord => Unit] = Nil
 
 	/**
-	* Creates a new record from a DBObject. For internal use only.
-	*
-	* @param obj - the DBObject
-	*/
-	private def createRecord(dbo: DBObject): Box[BaseRecord] = {
-		val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
-		rec.runSafe {
-			introspect(rec, rec.getClass.getMethods) {case (v, mf) => }
-		}
-		rec.fromDBObject(dbo) // convert to this using fromDBObject method
-	}
-
-	/**
 	* Delete the instance from backing store
 	*/
 	def delete_!(inst: BaseRecord): Boolean = {
 		foreachCallback(inst, _.beforeDelete)
 		try {
 			delete("_id", inst.id)
-			/*
-			MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-				coll.remove(new BasicDBObject("_id", inst.id))
-			)
-			*/
 			true
 		}
 		catch {
@@ -79,29 +61,23 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
 			coll.findOne(qry) match {
 				case null => Empty
-				case dbo => createRecord(dbo)
+				case dbo => fromDBObject(dbo)
 			}
 		)
 	}
 
 	/**
-	* Find a single row by id
-	*/
-	//def find(a: Any): Box[BaseRecord] = find(new BasicDBObject("_id", a))
-
-	/**
 	* Find a single row by an ObjectId
 	*/
 	def find(oid: ObjectId): Box[BaseRecord] = find(new BasicDBObject("_id", oid))
-	
+
 	/**
-	* Find a single row by an Object
-	* This doesn't work because we need JObject's to be implicitly converted.
+	* Find a single row by Any
+	* This doesn't work as find because we need JObject's to be implicitly converted.
 	*
 	*/
-	//def find(o: Object): Box[BaseRecord] = find(new BasicDBObject("_id", o))
 	def findAny(a: Any): Box[BaseRecord] = find(new BasicDBObject("_id", a))
-	
+
 	/**
 	* Find a single row by a String id
 	*/
@@ -109,9 +85,9 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		case true => find(new BasicDBObject("_id", new ObjectId(s)))
 		case false => find(new BasicDBObject("_id", s))
 	}
-	
+
 	/**
-	* Find a single row by a Int id
+	* Find a single row by an Int id
 	*/
 	def find(id: Int): Box[BaseRecord] = find(new BasicDBObject("_id", id))
 
@@ -133,14 +109,14 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		* The call to toArray retrieves all documents and puts them in memory.
 		*/
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
-			coll.find.toArray.map(dbo => createRecord(dbo)).filter(_.isDefined).map(x => x.open_!).toList
+			coll.find.toArray.flatMap(dbo => fromDBObject(dbo).toList).toList
 		})
 	}
 
 	/**
-	* Find all rows using a DBObject query. Internal use only.
+	* Find all rows using a DBObject query.
 	*/
-	private def findAll(qry: DBObject, sort: Option[DBObject], opts: FindOption*): List[BaseRecord] = {
+	def findAll(qry: DBObject, sort: Option[DBObject], opts: FindOption*): List[BaseRecord] = {
 		val findOpts = opts.toList
 
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll => {
@@ -151,7 +127,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 			)
 			sort.foreach( s => cur.sort(s))
 			// The call to toArray retrieves all documents and puts them in memory.
-			cur.toArray.map(dbo => createRecord(dbo)).filter(_.isDefined).map(x => x.open_!).toList
+			cur.toArray.flatMap(dbo => fromDBObject(dbo).toList).toList
 		})
 	}
 
@@ -199,8 +175,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		foreachCallback(inst, _.beforeSave)
 		try {
 			MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-				//coll.save(JSON.parse(asJSON(inst).toString)) // convert to DBObject via json
-				coll.save(toDBObject(inst))
+				coll.save(inst.asDBObject)
 			)
 			true
 		}
@@ -218,7 +193,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	def save(inst: BaseRecord, db: DB): Boolean = {
 		foreachCallback(inst, _.beforeSave)
 		try {
-			db.getCollection(collectionName).save(toDBObject(inst))
+			db.getCollection(collectionName).save(inst.asDBObject)
 			true
 		}
 		catch {
@@ -229,16 +204,11 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		}
 	}
 
-	/**
-	* Was this instance saved in backing store?
-	*/
-	def saved_?(inst: BaseRecord): Boolean = true
-
 	/*
 	* Update document with a JObject query using the given Mongo instance
 	*/
 	def update(qry: JObject, newbr: BaseRecord, db: DB, opts: UpdateOption*) {
-		update(JObjectParser.parse(qry), toDBObject(newbr), db, opts :_*)
+		update(JObjectParser.parse(qry), newbr.asDBObject, db, opts :_*)
 	}
 
 	/*
@@ -249,48 +219,22 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 			update(qry, newbr, db, opts :_*)
 		})
 	}
-	
+
 	/*
 	* Update document with a JObject query in strict mode
-	
+
 	def updateStrict(qry: JObject, newbr: BaseRecord, opts: UpdateOption*): BaseRecord = {
 		MongoDB.use(mongoIdentifier) ( db => {
 			update(qry, newbr, db, opts :_*)
 		})
 	}*/
 
-
-	/**
-	* Populate the inst's fields with the values from a DBObject. Values are set
-	* using setFromAny passing it the DBObject returned from Mongo.
-	*
-	* @param inst - the record that will be populated
-	* @param obj - The DBObject
-	* @return Box[BaseRecord]
-	*/
-	def fromDBObject(inst: BaseRecord, obj: DBObject): Box[BaseRecord] = {
-		// loop thru each field name
-		val keys = obj.keySet
-		keys.size match {
-			case 0 => Empty
-			case _ => {
-				for (k <- keys.toArray) {
-					// mongo-java-driver returns json objects as string instead of DBObjects (??)
-					inst.fieldByName(k.toString).map(field =>
-						field.setFromAny(obj.get(k.toString))
-					)
-				}
-				Full(inst)
-			}
-		}
-	}
-
 	/**
 	* Create a BasicDBObject from the field names and values.
 	* - MongoFieldFlavor types (List) are converted to DBObjects
-	*   using toDBObject
+	*   using asDBObject
 	*/
-	private def toDBObject(inst: BaseRecord): DBObject = {
+	def asDBObject(inst: BaseRecord): DBObject = {
 
 		import Meta.Reflection._
 		import field.MongoFieldFlavor
@@ -299,6 +243,7 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 
 		for (f <- fields) {
 			fieldByName(f.name, inst) match {
+				case Full(field) if (field.optional_? && field.valueBox.isEmpty) => // don't add to DBObject
 				/* FIXME: Doesn't work
 				case Full(field) if field.isInstanceOf[CountryField[Any]] =>
 					dbo.put(f.name, field.asInstanceOf[CountryField[Any]].value)
@@ -315,6 +260,48 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 			}
 		}
 		dbo.get
+	}
+
+	/**
+	* Create a Record then set the fields with the given DBObject
+	*
+	* @param dbo - The DBObject
+	* @return Box[BaseRecord]
+	
+	def fromDBObject(dbo: DBObject): Box[BaseRecord] = {
+		val inst = createRecord
+    setFieldsFromDBObject(inst, dbo) map (_ => inst)
+	}
+	*/
+	/**
+	* Creates a new record from a then sets the fields with the given DBObject.
+	*
+	* @param dbo - the DBObject
+	* @return Box[BaseRecord]
+	*/
+	def fromDBObject(dbo: DBObject): Box[BaseRecord] = {
+		val inst: BaseRecord = createRecord //rootClass.newInstance.asInstanceOf[BaseRecord]
+		inst.runSafe {
+			introspect(inst, inst.getClass.getMethods) {case (v, mf) => }
+		}
+		setFieldsFromDBObject(inst, dbo) map (_ => inst)
+	}
+	
+	/**
+	* Populate the inst's fields with the values from a DBObject. Values are set
+	* using setFromAny passing it the DBObject returned from Mongo.
+	*
+	* @param inst - the record that will be populated
+	* @param obj - The DBObject
+	* @return Box[BaseRecord]
+	*/
+	def setFieldsFromDBObject(inst: BaseRecord, dbo: DBObject): Box[Unit] = {
+		dbo.keySet.toList.foreach {
+			k => inst.fieldByName(k.toString).map {
+				field => field.setFromAny(dbo.get(k.toString))
+			}
+		}
+		Full(())
 	}
 
 }

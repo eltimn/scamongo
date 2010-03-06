@@ -31,11 +31,6 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
   def id: Any
 
 	/**
-	* Was this instance deleted from backing store?
-	*/
-	private var was_deleted_? = false
-
-	/**
 	* The meta record (the object that contains the meta result for this type)
 	*/
 	def meta: MongoMetaRecord[MyType]
@@ -54,17 +49,10 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 	* Delete the instance from backing store
 	*/
 	def delete_! : Boolean = {
-		if (!can_delete_?) false else
 		runSafe {
-			was_deleted_? = meta.delete_!(this)
-			was_deleted_?
+			meta.delete_!(this)
 		}
 	}
-
-	/**
-	* Can this model object be deleted?
-	*/
-	def can_delete_? : Boolean =  meta.saved_?(this) && !was_deleted_?
 
 /* Set mongoIdentifier in meta object. No need to support calcDbId for sharding
 	private var dbMongoIdentifier: Option[MongoIdentifier] = None
@@ -87,13 +75,14 @@ trait MongoRecord[MyType <: MongoRecord[MyType]] extends Record[MyType] {
 */
 
 	/**
-	* Populate this record's fields with the values from a DBObject
-	*
-	* @param obj - The DBobject
+	* Encode a record instance into a DBObject
 	*/
-	def fromDBObject(obj: DBObject): Box[MyType] = {
-		meta.fromDBObject(this, obj)
-	}
+	def asDBObject: DBObject = meta.asDBObject(this)
+	
+	/**
+	* Set the fields of this record from the given DBObject
+	*/
+  def setFieldsFromDBObject(dbo: DBObject): Box[Unit] = meta.setFieldsFromDBObject(this, dbo)
 }
 
 /**

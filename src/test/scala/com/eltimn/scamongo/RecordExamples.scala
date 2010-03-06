@@ -19,7 +19,7 @@ package com.eltimn.scamongo
 import java.util.{Calendar, Date, UUID}
 import java.util.regex.Pattern
 
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonDSL._
 import net.liftweb.json.JsonAST.JObject
@@ -46,7 +46,7 @@ object RecordExamples extends Specification {
 	}
 
 	"TestRecord example" in {
-	
+
 //		implicit val formats = TestRecord.formats
 
     val tr = TestRecord.createRecord
@@ -86,7 +86,7 @@ object RecordExamples extends Specification {
 			t.stringfield.value must_== tr.stringfield.value
 			t.timezonefield.value must_== tr.timezonefield.value
 			t.datetimefield.value must_== tr.datetimefield.value
-			
+
 			val p = RPerson.create(t.person.value)(TestRecord.formats)
 			p.name must_== per.name
 			p.age must_== per.age
@@ -134,7 +134,7 @@ object RecordExamples extends Specification {
   	md2.refstringdoc.set(refString1.getRef)
   	md3.refstringdoc.set(refString2.getRef)
   	md4.refstringdoc.set(refString2.getRef)
-  	
+
   	md1.refdocId.set(ref1.id)
   	md2.refdocId.set(ref1.id)
   	md3.refdocId.set(ref2.id)
@@ -158,7 +158,7 @@ object RecordExamples extends Specification {
   	})
 
   	// fetch a refdoc
-  	val refFromFetch = md1.refdoc.fetch
+  	val refFromFetch = md1.refdoc.obj
   	refFromFetch.isDefined must_== true
 		refFromFetch.open_!.id must_== ref1.id
 
@@ -214,14 +214,6 @@ object RecordExamples extends Specification {
 			m.cnt.value must_== 1
 		})
 
-		// Upsert with Map query - this should add a new row
-		val md6 = MainDoc.createRecord
-		md6.name.set("md6")
-		md6.refdoc.set(ref1.getRef)
-		md6.refstringdoc.set(refString1.getRef)
-		MainDoc.update(("name" -> "nothing"), md6, Upsert)
-		MainDoc.findAll.size must_== 6
-
 		if (!debug) {
 			// delete them
 			md1.delete_!
@@ -229,7 +221,6 @@ object RecordExamples extends Specification {
 			md3.delete_!
 			md4.delete_!
 			md5.delete_!
-			md6.delete_!
 			ref1.delete_!
 			ref2.delete_!
 
@@ -289,14 +280,37 @@ object RecordExamples extends Specification {
 		}
 
 	}
-	
+
 	"Map Example" in {
 		val md1 = MapDoc.createRecord
 		md1.stringmap.set(Map("h" -> "hola"))
-		
+
 		md1.save must_== md1
+
+		md1.delete_!
 	}
 
+	"Optional Example" in {
+		val od1 = OptionalDoc.createRecord
+		od1.stringbox.valueBox must_== Empty
+		od1.save must_== od1
+
+		OptionalDoc.find(od1.id).foreach {
+			od1FromDB =>
+				od1FromDB.stringbox.valueBox must_== od1.stringbox.valueBox
+		}
+
+
+		val od2 = OptionalDoc.createRecord
+		od1.stringbox.valueBox must_== Empty
+		od2.stringbox.set("aloha")
+		od2.save must_== od2
+
+		OptionalDoc.find(od2.id).foreach {
+			od2FromDB =>
+				od2FromDB.stringbox.valueBox must_== od2.stringbox.valueBox
+		}
+	}
 
   doLast {
   	if (!debug) {
@@ -305,6 +319,8 @@ object RecordExamples extends Specification {
 			MainDoc.drop
   		RefDoc.drop
   		ListDoc.drop
+  		MapDoc.drop
+  		OptionalDoc.drop
 
   		// drop the database
   		MongoDB.use {
@@ -393,9 +409,9 @@ class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
 
 	object refdoc extends DBRefField[MainDoc, RefDoc](this, RefDoc)
 	object refstringdoc extends DBRefField[MainDoc, RefStringDoc](this, RefStringDoc)
-	
+
 	object refdocId extends ObjectIdField(this) {
-		def fetch = RefDoc.find(value)
+		def obj = RefDoc.find(value)
 	}
 }
 object MainDoc extends MainDoc with MongoMetaRecord[MainDoc]
@@ -437,7 +453,7 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 	object calendarlist extends MongoListField[ListDoc, Calendar](this)
 	object patternlist extends MongoListField[ListDoc, Pattern](this)
 	object dbreflist extends MongoListField[ListDoc, DBRef](this)
-	
+
 	// specialized list types
 	object jobjlist extends MongoJObjectListField(this)
 	object datelist	extends MongoDateListField(this)
@@ -454,7 +470,7 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 			Full(set(lst))
 		}
 	}
-	
+
 	object maplist extends MongoListField[ListDoc, Map[String, String]](this) {
 		override def asDBObject: DBObject = {
 			val dbl = new BasicDBList
@@ -462,11 +478,11 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 			value.foreach {
 				m => {
 					val dbo = new BasicDBObject
-					
+
 					m.keys.foreach(k => {
 						dbo.put(k.toString, m.getOrElse(k, ""))
 					})
-					
+
 					dbl.add(dbo)
 				}
 			}
@@ -504,9 +520,20 @@ object CustomFormats extends DefaultFormats {
 
 class MapDoc extends MongoRecord[MapDoc] with MongoId[MapDoc] {
 	def meta = MapDoc
-	
+
 	object stringmap extends MongoMapField[MapDoc, String](this)
 }
 object MapDoc extends MapDoc with MongoMetaRecord[MapDoc] {
 	override def formats = DefaultFormats.lossless // adds .000
 }
+
+class OptionalDoc extends MongoRecord[OptionalDoc] with MongoId[OptionalDoc] {
+	def meta = OptionalDoc
+	// optional fields
+	object stringbox extends LStringField(this, 32) {
+		override def optional_? = true
+		override def defaultValue = "nothin"
+	}
+}
+object OptionalDoc extends OptionalDoc with MongoMetaRecord[OptionalDoc]
+
