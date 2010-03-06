@@ -7,25 +7,25 @@ Jar is available at:
 http://dl.dropbox.com/u/1154284/scamongo-0.1.jar
 http://dl.dropbox.com/u/1154284/scamongo-0.1.1.jar
 
-hn. Release Notes
+h2. Release Notes
 
 *version-0.1.1*
 
-*Updated for use with mongo-java-driver 1.3 and lift 2.0-M3
-*Added support for optional_? fields [1] - If optional_? == true the field will not be included in the DBObject
-*Fixed StringField validators to align with new arg type [1]
-*Changed internals to align with Ross' fromOther and asOther paradigm [2]
+* Updated for use with mongo-java-driver 1.3 and lift 2.0-M3
+* Added support for optional_? fields [1] - If optional_? == true the field will not be included in the DBObject
+* Fixed StringField validators to align with new arg type [1]
+* Changed internals to align with Ross' fromOther and asOther paradigm [2]
 
-*Removed MapParser
+* Removed MapParser
 
 [1] http://groups.google.com/group/liftweb/browse_thread/thread/42183cb100176f1e/f916dce6a459fdd0?lnk=gst&q=record+option#f916dce6a459fdd0
 [2] http://groups.google.com/group/liftweb/browse_thread/thread/5c0735fc0d5f6250#
 
 *version-0.1*
 
-*First public release
+* First public release
 
-hn. Todo/Notes
+h2. Todo/Notes
 
 General
 * eval ?
