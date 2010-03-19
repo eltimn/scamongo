@@ -24,17 +24,31 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject, DBRef, Object
 import com.mongodb.util.JSON
 
 /*
-* Field for storing a DBRef
-*/
+ * Field for storing a DBRef
+ */
 //abstract class MongoRefField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 //abstract class MongoRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoMetaRecord[RefType]](rec: OwnerType, ref: RefType)
 abstract class DBRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoRecord[RefType]](rec: OwnerType, ref: RefType)
 	extends Field[DBRef, OwnerType] {
 
 	/*
-	* get the referenced object
-	*/
-	def obj = ref.meta.findAny(value.getId)
+   * get the referenced object
+	 */
+	def obj = synchronized {  
+    if (!_calcedObj) {  
+      _calcedObj = true  
+      this._obj = ref.meta.findAny(value.getId)
+    }  
+    _obj  
+  }
+
+  def primeObj(obj: Box[RefType]) = synchronized {  
+    _obj = obj
+    _calcedObj = true
+  }
+  
+  private var _obj: Box[RefType] = Empty  
+  private var _calcedObj = false
 
 	def asJs = Str(toString)
 
@@ -69,6 +83,5 @@ abstract class DBRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoR
 	def toForm = <div></div>
 
 	def owner = rec
-
 }
 
