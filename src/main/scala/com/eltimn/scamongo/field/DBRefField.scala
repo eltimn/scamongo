@@ -42,6 +42,8 @@ abstract class DBRefField[OwnerType <: MongoRecord[OwnerType], RefType <: MongoR
     _obj  
   }
 
+  def cached_? : Boolean = synchronized { _calcedObj }
+
   def primeObj(obj: Box[RefType]) = synchronized {  
     _obj = obj
     _calcedObj = true
