@@ -38,8 +38,8 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 	//def afterCommit: List[BaseRecord => Unit] = Nil
 
 	/**
-	* Delete the instance from backing store
-	*/
+   * Delete the instance from backing store
+   */
 	def delete_!(inst: BaseRecord): Boolean = {
 		foreachCallback(inst, _.beforeDelete)
 		try {
@@ -54,9 +54,17 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		}
 	}
 
+  def bulkDelete_!!(qry: DBObject): Unit = {
+  	MongoDB.useCollection(mongoIdentifier, collectionName)(coll => {
+  		coll.remove(qry)
+  	})
+  }
+
+  def bulkDelete_!!(k: String, o: Any): Unit = bulkDelete_!!(new BasicDBObject(k, o))
+
 	/**
-	* Find a single row by a qry, using a DBObject.
-	*/
+   * Find a single row by a qry, using a DBObject.
+   */
 	def find(qry: DBObject): Box[BaseRecord] = {
 		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
 			coll.findOne(qry) match {
