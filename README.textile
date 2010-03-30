@@ -30,7 +30,7 @@ h2. Todo/Notes
 General
 * eval ?
 * query DSL: By, In, >=, etc.
-* Boolean, ObjectId, Date, Map query examples 
+* Boolean, Date query examples 
 * master/slave, replication
 * MongoAuth example
 * Test all data types
@@ -41,11 +41,9 @@ Document
 * save, update strict. Return Option.
 
 Record
-* BoxField & OptionField
-* String validators & ~LocaleField.localeList
+* String validators & LocaleField.localeList
 * callbacks, before/after update, before/after insert
-* save, saved_?, runSafe, try-catch
-* Map serializer
+* runSafe, try-catch
 * ListField (JsonObjectListField)
 * saveStrict, updateStrict methods
 * useSession example

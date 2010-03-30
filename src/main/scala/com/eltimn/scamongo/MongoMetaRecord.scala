@@ -54,14 +54,6 @@ trait MongoMetaRecord[BaseRecord <: MongoRecord[BaseRecord]]
 		}
 	}
 
-  def bulkDelete_!!(qry: DBObject): Unit = {
-  	MongoDB.useCollection(mongoIdentifier, collectionName)(coll => {
-  		coll.remove(qry)
-  	})
-  }
-
-  def bulkDelete_!!(k: String, o: Any): Unit = bulkDelete_!!(new BasicDBObject(k, o))
-
 	/**
    * Find a single row by a qry, using a DBObject.
    */

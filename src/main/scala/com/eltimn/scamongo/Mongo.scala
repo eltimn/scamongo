@@ -309,24 +309,29 @@ trait MongoMeta[BaseDocument] {
 	* Count documents by JObject query
 	*/
 	def count(qry: JObject):Long = count(JObjectParser.parse(qry))
+	
+	/*
+	* Delete documents by a DBObject query
+	*/
+	def delete(qry: DBObject) {
+		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
+			coll.remove(qry)
+		)
+	}
 
 	// delete a document
 	def delete(k: String, v: Any) {
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-			coll.remove(new BasicDBObject(k, v match {
-				case s: String if (ObjectId.isValid(s)) => new ObjectId(s)
-				case _ => v
-			}))
-		)
+		delete(new BasicDBObject(k, v match {
+			case s: String if (ObjectId.isValid(s)) => new ObjectId(s)
+			case _ => v
+		}))
 	}
 
 	/*
 	* Delete documents by a JObject query
 	*/
 	def delete(qry: JObject) {
-		MongoDB.useCollection(mongoIdentifier, collectionName) ( coll =>
-			coll.remove(JObjectParser.parse(qry))
-		)
+		delete(JObjectParser.parse(qry))
 	}
 
 	/* drop this document collection */
