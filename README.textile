@@ -6,8 +6,14 @@ http://code.google.com/p/simple-build-tool/
 Jar is available at:
 http://dl.dropbox.com/u/1154284/scamongo-0.1.jar
 http://dl.dropbox.com/u/1154284/scamongo-0.1.1.jar
+http://dl.dropbox.com/u/1154284/scamongo-0.1.2.jar
 
 h2. Release Notes
+
+*version-0.1.2*
+
+* Added harryh's changes to DBRef
+* Added delete method that takes DBObject as input.
 
 *version-0.1.1*
 
