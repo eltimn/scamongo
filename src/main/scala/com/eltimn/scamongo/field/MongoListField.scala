@@ -20,10 +20,10 @@ import java.util.Date
 
 import scala.collection.jcl.Conversions._
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.json.JsonAST.JObject
-import net.liftweb.http.js.JE.Str
-import net.liftweb.record.{Field, Record}
+import _root_.net.liftweb.common.{Box, Empty, Failure, Full}
+import _root_.net.liftweb.json.JsonAST.{JNothing, JObject, JValue}
+import _root_.net.liftweb.http.js.JE.Str
+import _root_.net.liftweb.record.{Field, Record}
 
 import com.mongodb._
 import com.mongodb.util.JSON
@@ -37,6 +37,10 @@ class MongoListField[OwnerType <: MongoRecord[OwnerType], ListType](rec: OwnerTy
 	import Meta.Reflection._
 
 	def asJs = Str(toString)
+	
+	def asJValue = (JNothing: JValue) // not implemented
+	
+	def setFromJValue(jvalue: JValue) = Empty // not implemented
 
 	def asXHtml = <div></div>
 

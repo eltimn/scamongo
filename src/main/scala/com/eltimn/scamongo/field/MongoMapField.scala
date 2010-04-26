@@ -16,10 +16,11 @@ package com.eltimn.scamongo.field
  * and limitations under the License.
  */
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.http.js.JE.Str
-import net.liftweb.record.{Field, Record}
-import net.liftweb.util.Log
+import _root_.net.liftweb.common.{Box, Empty, Failure, Full}
+import _root_.net.liftweb.http.js.JE.Str
+import _root_.net.liftweb.json.JsonAST.{JNothing, JValue}
+import _root_.net.liftweb.record.{Field, Record}
+import _root_.net.liftweb.util.Log
 
 import com.mongodb._
 
@@ -27,9 +28,13 @@ class MongoMapField[OwnerType <: MongoRecord[OwnerType], MapValueType](rec: Owne
 	extends Field[Map[String, MapValueType], OwnerType]
 	with MongoFieldFlavor[Map[String, MapValueType]] {
 
-	def asJs = Str(toString)
+	def asJs = Str(toString) // not implemented
+	
+	def asJValue = (JNothing: JValue) // not implemented
+	
+	def setFromJValue(jvalue: JValue) = Empty // not implemented
 
-	def asXHtml = <div></div>
+	def asXHtml = <div></div> // not implemented
 
 	def defaultValue = Map[String, MapValueType]()
 
@@ -50,7 +55,7 @@ class MongoMapField[OwnerType <: MongoRecord[OwnerType], MapValueType](rec: Owne
     }
   }
 
-	def toForm = <div></div>
+	def toForm = <div></div> // not implemented
 
 	def owner = rec
 

@@ -16,9 +16,11 @@ package com.eltimn.scamongo.field
  * and limitations under the License.
  */
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.http.js.JE.Str
-import net.liftweb.record.{Field, Record}
+import _root_.net.liftweb.common.{Box, Empty, Failure, Full}
+import _root_.net.liftweb.http.js.JE.{JsNull, Str}
+import _root_.net.liftweb.json.JsonAST.{JNothing, JNull, JString, JValue}
+import _root_.net.liftweb.record.{Field, Record}
+import _root_.net.liftweb.record.FieldHelpers
 
 import com.mongodb.{ObjectId, DBRef}
 
@@ -27,8 +29,16 @@ import com.mongodb.{ObjectId, DBRef}
 */
 class ObjectIdField[OwnerType <: MongoRecord[OwnerType]](rec: OwnerType)
 	extends Field[ObjectId, OwnerType] {
-
-	def asJs = Str(toString)
+	
+	def asJs = valueBox.map(v => Str(v.toString)) openOr JsNull
+	
+	def asJValue: JValue = valueBox.map(v => JString(v.toString)) openOr (JNothing: JValue)
+	
+	def setFromJValue(jvalue: JValue): Box[ObjectId] = jvalue match {
+		case JNothing|JNull if optional_? => setBox(Empty)
+		case JString(s) => setFromString(s)
+		case other => setBox(FieldHelpers.expectedA("JString", other))	
+	}
 
 	def asXHtml = <div></div>
 

@@ -16,15 +16,19 @@ package com.eltimn.scamongo.field
  * and limitations under the License.
  */
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.http.js.JE.Str
-import net.liftweb.json.JsonAST.JObject
-import net.liftweb.json.JsonParser
-import net.liftweb.record.{Field, Record}
+import _root_.net.liftweb.common.{Box, Empty, Failure, Full}
+import _root_.net.liftweb.http.js.JE.Str
+import _root_.net.liftweb.json.JsonAST.{JNothing, JObject, JValue}
+import _root_.net.liftweb.json.JsonParser
+import _root_.net.liftweb.record.{Field, Record}
 
 class JObjectField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[JObject, OwnerType] {
 
 	def asJs = Str(toString)
+	
+	def asJValue = (JNothing: JValue) // not implemented
+	
+	def setFromJValue(jvalue: JValue) = Empty // not implemented
 
 	def asXHtml = <div></div>
 

@@ -41,7 +41,7 @@ object TestDBb extends MongoIdentifier {
 //class DocumentExampleTest extends Runner(DocumentExamples) with JUnit
 object DocumentExamples extends Specification {
 
-	doFirst {
+	doBeforeSpec {
 		// create a Mongo instance
 		val mongoHost = MongoHost("localhost", 27017)
 		// define the dbs
@@ -325,7 +325,7 @@ object DocumentExamples extends Specification {
 			TestCollection.save(tc, db)
 			db.getLastError.get("err") must beNull
 			TestCollection.save(tc2, db) // this should return an error
-			db.getLastError.get("err").toString must startWith("E11000 duplicate key errorindex")
+			db.getLastError.get("err").toString must startWith("E11000 duplicate key error index")
 			TestCollection.save(tc3, db)
 			db.getLastError.get("err") must beNull
 
@@ -443,7 +443,7 @@ object DocumentExamples extends Specification {
 
   }
 
-  doLast {
+  doAfterSpec {
   	if (!debug) {
 			/** drop the collections */
 			SimplePerson.drop

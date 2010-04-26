@@ -40,7 +40,7 @@ object RecordExamples extends Specification {
 
 	val debug = false
 
-	doFirst {
+	doBeforeSpec {
 		// define the db
 		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost("localhost", 27017), "test_record"))
 	}
@@ -312,7 +312,7 @@ object RecordExamples extends Specification {
 		}
 	}
 
-  doLast {
+  doAfterSpec {
   	if (!debug) {
 			/** drop the collections */
 			TestRecord.drop
@@ -390,7 +390,9 @@ class TestRecord extends MongoRecord[TestRecord] {
 	*/
 }
 
-object TestRecord extends TestRecord with MongoMetaRecord[TestRecord]
+object TestRecord extends TestRecord with MongoMetaRecord[TestRecord] {
+	def createRecord = new TestRecord
+}
 
 case class RPerson(name: String, age: Int, address: Address, children: List[Child])
 	extends JsonObject[RPerson] {
@@ -414,12 +416,16 @@ class MainDoc extends MongoRecord[MainDoc] with MongoId[MainDoc] {
 		def obj = RefDoc.find(value)
 	}
 }
-object MainDoc extends MainDoc with MongoMetaRecord[MainDoc]
+object MainDoc extends MainDoc with MongoMetaRecord[MainDoc] {
+	def createRecord = new MainDoc
+}
 
 class RefDoc extends MongoRecord[RefDoc] with MongoId[RefDoc] {
 	def meta = RefDoc
 }
-object RefDoc extends RefDoc with MongoMetaRecord[RefDoc]
+object RefDoc extends RefDoc with MongoMetaRecord[RefDoc] {
+	def createRecord = new RefDoc
+}
 
 // string as id
 class RefStringDoc extends MongoRecord[RefStringDoc] {
@@ -436,7 +442,9 @@ class RefStringDoc extends MongoRecord[RefStringDoc] {
 			new DBRef(db, meta.collectionName, _id.value)
 		)
 }
-object RefStringDoc extends RefStringDoc with MongoMetaRecord[RefStringDoc]
+object RefStringDoc extends RefStringDoc with MongoMetaRecord[RefStringDoc] {
+	def createRecord = new RefStringDoc
+}
 
 class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 	def meta = ListDoc
@@ -505,7 +513,8 @@ class ListDoc extends MongoRecord[ListDoc] with MongoId[ListDoc] {
 
 }
 object ListDoc extends ListDoc with MongoMetaRecord[ListDoc] {
-	override def formats = DefaultFormats.lossless // adds .000
+	override def formats = DefaultFormats.lossless // adds .000 to Dates
+	def createRecord = new ListDoc
 }
 
 case class JsonDoc(id: String, name: String) extends JsonObject[JsonDoc] {
@@ -525,6 +534,7 @@ class MapDoc extends MongoRecord[MapDoc] with MongoId[MapDoc] {
 }
 object MapDoc extends MapDoc with MongoMetaRecord[MapDoc] {
 	override def formats = DefaultFormats.lossless // adds .000
+	def createRecord = new MapDoc
 }
 
 class OptionalDoc extends MongoRecord[OptionalDoc] with MongoId[OptionalDoc] {
@@ -535,5 +545,7 @@ class OptionalDoc extends MongoRecord[OptionalDoc] with MongoId[OptionalDoc] {
 		override def defaultValue = "nothin"
 	}
 }
-object OptionalDoc extends OptionalDoc with MongoMetaRecord[OptionalDoc]
+object OptionalDoc extends OptionalDoc with MongoMetaRecord[OptionalDoc] {
+	def createRecord = new OptionalDoc
+}
 

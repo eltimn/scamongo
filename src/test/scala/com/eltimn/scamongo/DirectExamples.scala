@@ -33,9 +33,9 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, DBObject}
 
 object DirectExamples extends Specification {
 
-	doFirst { 
+	doBeforeSpec { 
 		// define the db
-		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost("localhost", 27017), "test_direct"))
+		MongoDB.defineDb(DefaultMongoIdentifier, MongoAddress(MongoHost(), "test_direct"))
 	}
 
 	import com.mongodb.util.JSON // Mongo parser/serializer
@@ -228,7 +228,7 @@ object DirectExamples extends Specification {
 		  doc2.put("type", "db")
 		  doc2.put("count", 1)
 
-		doc3.put("name", "MongoDB")
+			doc3.put("name", "MongoDB")
 		  doc3.put("type", "db")
 		  doc3.put("count", 1)
 
@@ -236,7 +236,7 @@ object DirectExamples extends Specification {
 			coll.save(doc)
 			db.getLastError.get("err") must beNull
 			coll.save(doc2) // this should return an error
-			db.getLastError.get("err").toString must startWith("E11000 duplicate key errorindex")
+			db.getLastError.get("err").toString must startWith("E11000 duplicate key error index")
 			coll.save(doc3)
 			db.getLastError.get("err") must beNull
 
@@ -290,7 +290,7 @@ object DirectExamples extends Specification {
 		})
   }
 
-	doLast {
+	doAfterSpec {
 		if (!debug) {
 			/* drop the collections */
 			MongoDB.useCollection(DefaultMongoIdentifier, "testCollection") ( coll => {

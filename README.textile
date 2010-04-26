@@ -1,3 +1,10 @@
+README: Scamongo is being moved to the Lift project. In doing so I'm comtemplating 
+what to do with the scamongo-document part of this library. I'm trying to decide if I 
+should move that with it, discontinue support for it, or keep it as a separate project.
+Please contact me if you are using this at all and let me know what you think.
+
+Tim
+
 See wiki for project info.
 
 To build you will need to use sbt 
@@ -7,8 +14,25 @@ Jar is available at:
 http://dl.dropbox.com/u/1154284/scamongo-0.1.jar
 http://dl.dropbox.com/u/1154284/scamongo-0.1.1.jar
 http://dl.dropbox.com/u/1154284/scamongo-0.1.2.jar
+http://dl.dropbox.com/u/1154284/scamongo-0.1.3.jar
 
 h2. Release Notes
+
+*version-0.1.3*
+* Updated for use with mongo-java-driver 1.4 and lift 2.0-M4
+NOTE: There is a small breaking change in this version for scamongo-record users;
+record companion objects must now include a createRecord method. Here's an example:
+
+class TestRecord extends MongoRecord[TestRecord] with MongoId[TestRecord] {
+
+	def meta = TestRecord
+
+	object stringfield extends StringField(this, 32)
+}
+
+object TestRecord extends TestRecord with MongoMetaRecord[TestRecord] {
+	def createRecord = new TestRecord
+}
 
 *version-0.1.2*
 
