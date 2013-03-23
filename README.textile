@@ -1,6 +1,6 @@
 *NOTICE:* 
 
-The Scamongo project is now officially part of the "Lift (Lift Web Framework)":http://github.com/dpp/liftweb project. It is currently available in the snapshot repo and will be included in the upcoming M5 milestone.
+The Scamongo project is now officially part of the "Lift (Lift Web Framework)":http://www.liftweb.net/ project. It is currently available in the snapshot repo and will be included in the upcoming M5 milestone.
 
 More information available on the Lift Wiki at:
 "https://www.assembla.com/wiki/show/liftweb/MongoDB":https://www.assembla.com/wiki/show/liftweb/MongoDB
